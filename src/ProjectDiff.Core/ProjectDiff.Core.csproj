@@ -8,6 +8,10 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="GitVersion.MsBuild" Version="6.1.0">
+          <PrivateAssets>all</PrivateAssets>
+          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
         <PackageReference Include="LibGit2Sharp" Version="0.31.0"/>
         <PackageReference Include="Microsoft.VisualStudio.SolutionPersistence" Version="1.0.28"/>
         <PackageReference Include="Microsoft.Build.Prediction" Version="1.2.28"/>
