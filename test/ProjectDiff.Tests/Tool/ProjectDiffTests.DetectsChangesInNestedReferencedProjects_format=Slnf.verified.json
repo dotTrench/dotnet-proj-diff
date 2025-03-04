@@ -1,1 +1,1 @@
-﻿{"solution":{"path":"Sample.sln","projects":["Sample\\Sample.csproj","Application\\Application.csproj","Tests\\Tests.csproj"]}}
+﻿{"solution":{"path":"Sample.sln","projects":["Sample/Sample.csproj","Application/Application.csproj","Tests/Tests.csproj"]}}

@@ -78,10 +78,7 @@ public sealed class ProjectDiffCommand : RootCommand
     private readonly Option<bool> _absolutePaths = new(
         "--absolute-paths",
         () => false,
-        """
-        Output absolute paths, if not specified paths will be relative to the working directory. 
-        Or relative to --output if specified. This option will not affect slnf output as this requires relative paths
-        """
+        "Output absolute paths, if not specified paths will be relative to the working directory. Or relative to --output if specified. This option will not affect slnf format as this requires relative paths"
     );
 
     private readonly Option<FileInfo?> _outputOption = new(
@@ -317,7 +314,7 @@ public sealed class ProjectDiffCommand : RootCommand
             var projectPath = Path.GetRelativePath(
                 solution.Directory!.FullName,
                 project.Path
-            );
+            ).Replace('\\', '/');
             projects.Add(projectPath);
         }
 

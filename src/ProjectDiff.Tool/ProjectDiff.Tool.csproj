@@ -7,16 +7,30 @@
         <Nullable>enable</Nullable>
         <PackAsTool>true</PackAsTool>
         <ToolCommandName>dotnet-proj-diff</ToolCommandName>
+        <EnablePackageValidation>true</EnablePackageValidation>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="GitVersion.MsBuild" Version="6.1.0">
+          <PrivateAssets>all</PrivateAssets>
+          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
         <PackageReference Include="Microsoft.Build.Locator" Version="1.7.8"/>
+        <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0">
+          <PrivateAssets>all</PrivateAssets>
+          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
         <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
         <PackageReference Include="System.CommandLine.NamingConventionBinder" Version="2.0.0-beta4.22272.1" />
     </ItemGroup>
 
     <ItemGroup>
         <ProjectReference Include="..\ProjectDiff.Core\ProjectDiff.Core.csproj" />
+    </ItemGroup>
+    
+    <ItemGroup>
+        <None Include="..\..\README.md" Pack="true" PackagePath="\"/>
     </ItemGroup>
 
 </Project>
