@@ -190,7 +190,7 @@ public sealed class GitTreeFileSystem : MSBuildFileSystemBase
         return entry is { TargetType: TreeEntryTargetType.Tree };
     }
 
-    private readonly Lock _projectLoadLock = new();
+    private readonly object _projectLoadLock = new();
 
     public override bool FileExists(string path)
     {
@@ -215,7 +215,7 @@ public sealed class GitTreeFileSystem : MSBuildFileSystemBase
 
         // HACK: Since Imports doesn't use the file system we have to manually load the projects
         // whenever msbuild tries to load them.
-        using (_projectLoadLock.EnterScope())
+        lock (_projectLoadLock)
         {
             if (_projectCollection.GetLoadedProjects(path).Count == 0)
             {
