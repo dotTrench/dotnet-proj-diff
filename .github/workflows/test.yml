@@ -39,4 +39,4 @@ jobs:
         run: dotnet tool install --global --source /tmp/nupkgs --prerelease ProjectDiff.Tool
 
       - name: Run tool
-        run: dotnet-proj-diff ProjectDiff.sln --format json
+        run: dotnet-proj-diff ProjectDiff.sln ${{ github.base_ref }} --format json
