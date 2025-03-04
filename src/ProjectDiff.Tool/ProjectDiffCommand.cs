@@ -43,31 +43,31 @@ public sealed class ProjectDiffCommand : RootCommand
     private readonly Option<bool> _mergeBaseOption = new(
         "--merge-base",
         () => true,
-        "If true, instead of using <commit> use the merge base of <commit> and HEAD"
+        "If true instead of using <commit> use the merge base of <commit> and HEAD"
     );
 
     private readonly Option<bool> _includeDeleted = new(
         "--include-deleted",
         () => false,
-        "If true deleted projects be included in output"
+        "If true deleted projects will be included in output"
     );
 
     private readonly Option<bool> _includeModified = new(
         "--include-modified",
         () => true,
-        "If true modified projects be included in output"
+        "If true modified projects will be included in output"
     );
 
     private readonly Option<bool> _includeAdded = new(
         "--include-added",
         () => true,
-        "If true added projects be included in output"
+        "If true added projects will be included in output"
     );
 
     private readonly Option<bool> _includeReferencing = new(
         "--include-referencing",
         () => true,
-        "if true include referencing projects to be included in output"
+        "if true  projects referencing modified/deleted/added projects will be included in output"
     );
 
     private readonly Option<OutputFormat?> _format = new(
@@ -78,7 +78,10 @@ public sealed class ProjectDiffCommand : RootCommand
     private readonly Option<bool> _absolutePaths = new(
         "--absolute-paths",
         () => false,
-        "Output absolute paths, if not specified paths will be relative to the working directory. Or relative to --output if specified"
+        """
+        Output absolute paths, if not specified paths will be relative to the working directory. 
+        Or relative to --output if specified. This option will not affect slnf output as this requires relative paths
+        """
     );
 
     private readonly Option<FileInfo?> _outputOption = new(
