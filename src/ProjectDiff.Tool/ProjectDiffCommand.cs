@@ -317,7 +317,7 @@ public sealed class ProjectDiffCommand : RootCommand
             var projectPath = Path.GetRelativePath(
                 solution.Directory!.FullName,
                 project.Path
-            );
+            ).Replace('\\', '/');
             projects.Add(projectPath);
         }
 
