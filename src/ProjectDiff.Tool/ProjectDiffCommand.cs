@@ -70,16 +70,15 @@ public sealed class ProjectDiffCommand : RootCommand
         "if true include referencing projects to be included in output"
     );
 
-    private readonly Option<OutputFormat> _format = new(
+    private readonly Option<OutputFormat?> _format = new(
         "--format",
-        () => OutputFormat.Plain,
-        "Output format"
+        "Output format, if --output is specified format will be derived from file extension. Otherwise this defaults to 'plain'"
     );
 
     private readonly Option<bool> _absolutePaths = new(
         "--absolute-paths",
         () => false,
-        "Output absolute paths, if not specified paths will be relative to the working directory. Or relative to --output-file if specified"
+        "Output absolute paths, if not specified paths will be relative to the working directory. Or relative to --output if specified"
     );
 
     private readonly Option<FileInfo?> _outputOption = new(
@@ -132,7 +131,7 @@ public sealed class ProjectDiffCommand : RootCommand
         bool includeAdded,
         bool includeReferencing,
         bool absolutePaths,
-        OutputFormat format,
+        OutputFormat? format,
         FileInfo? output,
         IConsole c,
         CancellationToken cancellationToken
@@ -205,7 +204,21 @@ public sealed class ProjectDiffCommand : RootCommand
         var diff = BuildGraphDiff.Diff(fromBuildGraph, toBuildGraph, changes).Where(ShouldInclude);
 
         var diffOutput = new DiffOutput(output, console);
-        switch (format)
+        OutputFormat outputFormat;
+        if (format is not null)
+        {
+            outputFormat = format.Value;
+        }
+        else if (output is not null)
+        {
+            outputFormat = GetOutputFormatFromExtension(output.Extension);
+        }
+        else
+        {
+            outputFormat = OutputFormat.Plain;
+        }
+
+        switch (outputFormat)
         {
             case OutputFormat.Plain:
                 await WritePlain(diffOutput, diff, absolutePaths);
@@ -237,7 +250,7 @@ public sealed class ProjectDiffCommand : RootCommand
             };
     }
 
-    private async Task WritePlain(
+    private static async Task WritePlain(
         DiffOutput output,
         IEnumerable<DiffProject> diff,
         bool absolutePaths
@@ -350,6 +363,14 @@ public sealed class ProjectDiffCommand : RootCommand
             yield return Path.GetFullPath(change.Path, repository.Info.WorkingDirectory);
         }
     }
+
+    private static OutputFormat GetOutputFormatFromExtension(string extension) => extension switch
+    {
+        ".slnf" => OutputFormat.Slnf,
+        ".proj" => OutputFormat.Traversal,
+        ".json" => OutputFormat.Json,
+        _ => OutputFormat.Plain
+    };
 
 
     private sealed class DiffOutput
