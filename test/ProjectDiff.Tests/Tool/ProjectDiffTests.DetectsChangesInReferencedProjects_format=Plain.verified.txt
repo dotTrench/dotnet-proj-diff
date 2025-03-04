@@ -1,0 +1,2 @@
+﻿Sample/Sample.csproj
+Tests/Tests.csproj
