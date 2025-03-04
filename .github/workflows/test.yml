@@ -1,6 +1,8 @@
 name: Run tests
 
 on:
+  push:
+    branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
 
@@ -31,12 +33,3 @@ jobs:
 
       - name: Test
         run: dotnet test --no-build --no-restore --verbosity normal --configuration Release
-
-      - name: Pack
-        run: dotnet pack --configuration Release --output /tmp/nupkgs
-
-      - name: Install tool
-        run: dotnet tool install --global --source /tmp/nupkgs --prerelease ProjectDiff.Tool
-
-      - name: Run tool
-        run: dotnet-proj-diff ProjectDiff.sln ${{ github.base_ref }} --format json
