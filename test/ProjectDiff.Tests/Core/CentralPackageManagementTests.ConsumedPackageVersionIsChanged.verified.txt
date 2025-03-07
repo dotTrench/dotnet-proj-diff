@@ -1,8 +1,0 @@
-﻿{
-  Projects: [
-    {
-      Path: {RepositoryPath}Core\Core.csproj,
-      Status: Modified
-    }
-  ]
-}

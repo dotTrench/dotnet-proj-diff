@@ -99,8 +99,8 @@ public class ProjectDiffExecutor
             cancellationToken
         );
 
-        var toBuildGraph = BuildGraphFactory.CreateForProjectGraph(toGraph);
-        var fromBuildGraph = BuildGraphFactory.CreateForProjectGraph(fromGraph);
+        var toBuildGraph = BuildGraphFactory.CreateForProjectGraph(toGraph, changes, _options.CheckPackageReferences);
+        var fromBuildGraph = BuildGraphFactory.CreateForProjectGraph(fromGraph, changes, _options.CheckPackageReferences);
 
         return new ProjectDiffResult
         {

@@ -100,8 +100,8 @@ internal sealed class GraphDiffInstance
     }
 
     private static bool HasProjectPackageReferencesChanged(
-        IReadOnlyCollection<BuildGraphProjectPackageReference> previous,
-        IReadOnlyCollection<BuildGraphProjectPackageReference> current
+        IReadOnlyCollection<ProjectPackageReference> previous,
+        IReadOnlyCollection<ProjectPackageReference> current
     )
     {
         if (previous.Count != current.Count)

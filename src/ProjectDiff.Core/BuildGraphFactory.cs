@@ -1,6 +1,8 @@
-﻿using System.Diagnostics;
+﻿using System.Collections.Frozen;
+using System.Diagnostics;
 using Microsoft.Build.Execution;
 using Microsoft.Build.Graph;
+using Microsoft.Build.Logging.SimpleErrorLogger;
 using Microsoft.Build.Prediction;
 using Microsoft.Build.Prediction.Predictors;
 
@@ -14,14 +16,18 @@ public static class BuildGraphFactory
         .ToArray();
 
 
-    public static BuildGraph CreateForProjectGraph(ProjectGraph graph)
+    public static BuildGraph CreateForProjectGraph(
+        ProjectGraph graph,
+        FrozenSet<string> changedFiles,
+        bool collectPackageReferences
+    )
     {
         var executor = new ProjectGraphPredictionExecutor(
             ProjectGraphPredictors,
             ProjectPredictors.AllProjectPredictors
         );
 
-        var collector = new BuildGraphPredictionCollector(graph);
+        var collector = new BuildGraphPredictionCollector(graph, changedFiles, collectPackageReferences);
 
         executor.PredictInputsAndOutputs(graph, collector);
 
@@ -30,14 +36,27 @@ public static class BuildGraphFactory
 
     private sealed class BuildGraphPredictionCollector : IProjectPredictionCollector
     {
+        private const string PackageReferenceTypeTag = "PackageReference";
+        private const string RestoreStyleTag = "RestoreProjectStyle";
+        private const string NugetStyleTag = "NuGetProjectStyle";
+        private const string AssetsFilePathTag = "ProjectAssetsFile";
+        private const string CollectPackageReferences = "CollectPackageReferences";
+        private const string CollectCentralPackageVersions = "CollectCentralPackageVersions";
+
         private readonly ProjectGraph _projectGraph;
+        private readonly bool _collectPackageReferences;
         private readonly Dictionary<string, BuildGraphProjectCollector> _collectors;
+        private readonly FrozenSet<string> _changedFiles;
 
         public BuildGraphPredictionCollector(
-            ProjectGraph projectGraph
+            ProjectGraph projectGraph,
+            FrozenSet<string> changedFiles,
+            bool collectPackageReferences
         )
         {
             _projectGraph = projectGraph;
+            _changedFiles = changedFiles;
+            _collectPackageReferences = collectPackageReferences;
             _collectors = new Dictionary<string, BuildGraphProjectCollector>(_projectGraph.ProjectNodes.Count);
             foreach (var node in _projectGraph.ProjectNodes)
             {
@@ -55,17 +74,24 @@ public static class BuildGraphFactory
                 path = Path.GetFullPath(path, projectInstance.Directory);
             }
 
+            if (!_changedFiles.Contains(path))
+            {
+                return;
+            }
+
             if (!_collectors.TryGetValue(projectInstance.FullPath, out var collector))
             {
                 Debug.Fail($"Failed to get collector for project {projectInstance.FullPath}");
                 return;
             }
 
-            var directoryPackagesPropsPath = projectInstance.GetPropertyValue("DirectoryPackagesPropsPath");
+            if (_collectPackageReferences)
+            {
+                var directoryPackagesPropsPath = projectInstance.GetPropertyValue("DirectoryPackagesPropsPath");
 
-            if (directoryPackagesPropsPath == path)
-                return;
-
+                if (directoryPackagesPropsPath == path)
+                    return;
+            }
 
             collector.AddInputFile(path);
         }
@@ -88,14 +114,14 @@ public static class BuildGraphFactory
 
             return new BuildGraph
             {
-                Projects = projects.ToList(),
+                Projects = projects.OrderBy(it => it.References.Count).ToList(),
             };
         }
 
 
         private IEnumerable<BuildGraphProject> BuildGraphProjects()
         {
-            foreach (var node in _projectGraph.ProjectNodesTopologicallySorted)
+            foreach (var node in _projectGraph.ProjectNodes)
             {
                 if (!_collectors.TryGetValue(node.ProjectInstance.FullPath, out var collector))
                 {
@@ -104,9 +130,15 @@ public static class BuildGraphFactory
                 }
 
                 var references = node.ProjectReferences.Select(it => it.ProjectInstance.FullPath);
-                var packageReferences = GetPackageReferences(node.ProjectInstance);
-                yield return collector.ToBuildGraphProject(references, packageReferences);
+                collector.AddReferences(references);
+
+                if (_collectPackageReferences)
+                {
+                    collector.AddPackageReferences(GetPackageReferences(node.ProjectInstance));
+                }
             }
+
+            return _collectors.Values.Select(it => it.ToBuildGraphProject());
         }
 
         private static IEnumerable<KeyValuePair<string, string>> GetPackageReferences(ProjectInstance project)
@@ -124,7 +156,7 @@ public static class BuildGraphFactory
 
             if (!project.Build(
                     [CollectPackageReferences, CollectCentralPackageVersions],
-                    [],
+                    [new SimpleErrorLogger()],
                     out var targetOutputs
                 ))
             {
@@ -186,32 +218,19 @@ public static class BuildGraphFactory
             );
         }
 
-        private const string PackageReferenceTypeTag = "PackageReference";
-        private const string PACKAGE_VERSION_TYPE_TAG = "PackageVersion";
-        private const string VERSION_TAG = "Version";
-        private const string FRAMEWORK_TAG = "TargetFramework";
-        private const string FRAMEWORKS_TAG = "TargetFrameworks";
-        private const string RestoreStyleTag = "RestoreProjectStyle";
-        private const string NugetStyleTag = "NuGetProjectStyle";
-        private const string AssetsFilePathTag = "ProjectAssetsFile";
-        private const string IncludeAssets = "IncludeAssets";
-        private const string PrivateAssets = "PrivateAssets";
-        private const string CollectPackageReferences = "CollectPackageReferences";
-        private const string CollectCentralPackageVersions = "CollectCentralPackageVersions";
-
-        private static bool IsPackageReferenceProject(ProjectInstance project)
-        {
-            return project.GetPropertyValue(RestoreStyleTag) == "PackageReference" ||
-                   project.GetItems(PackageReferenceTypeTag).Count != 0 ||
-                   project.GetPropertyValue(NugetStyleTag) == "PackageReference" ||
-                   project.GetPropertyValue(AssetsFilePathTag) != "";
-        }
+        private static bool IsPackageReferenceProject(ProjectInstance project) =>
+            project.GetPropertyValue(RestoreStyleTag) == "PackageReference" ||
+            project.GetItems(PackageReferenceTypeTag).Count != 0 ||
+            project.GetPropertyValue(NugetStyleTag) == "PackageReference" ||
+            project.GetPropertyValue(AssetsFilePathTag) != "";
     }
 
     private sealed class BuildGraphProjectCollector
     {
         private readonly string _projectPath;
         private readonly HashSet<string> _inputFiles = [];
+        private readonly HashSet<string> _references = [];
+        private readonly HashSet<ProjectPackageReference> _packageReferences = [];
 
         public BuildGraphProjectCollector(string projectPath)
         {
@@ -226,24 +245,37 @@ public static class BuildGraphFactory
             }
         }
 
-        public BuildGraphProject ToBuildGraphProject(
-            IEnumerable<string> references,
-            IEnumerable<KeyValuePair<string, string>> packageReferences
-        )
+        public void AddReferences(IEnumerable<string> references)
+        {
+            foreach (var reference in references)
+            {
+                _references.Add(reference);
+            }
+        }
+
+        public void AddPackageReferences(IEnumerable<KeyValuePair<string, string>> packageReferences)
+        {
+            foreach (var reference in packageReferences)
+            {
+                _packageReferences.Add(
+                    new ProjectPackageReference
+                    {
+                        Name = reference.Key,
+                        Version = reference.Value
+                    }
+                );
+            }
+        }
+
+        public BuildGraphProject ToBuildGraphProject()
         {
             lock (_inputFiles)
             {
                 return new BuildGraphProject(
                     _projectPath,
-                    _inputFiles.ToList(),
-                    references.ToHashSet(),
-                    packageReferences.Select(
-                        it => new BuildGraphProjectPackageReference
-                        {
-                            Name = it.Key,
-                            Version = it.Value
-                        }
-                    ).ToList()
+                    _inputFiles,
+                    _references,
+                    _packageReferences
                 );
             }
         }

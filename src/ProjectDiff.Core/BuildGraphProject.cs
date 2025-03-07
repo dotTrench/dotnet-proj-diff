@@ -6,7 +6,7 @@ public sealed class BuildGraphProject
         string fullPath,
         IReadOnlyCollection<string> inputFiles,
         IReadOnlyCollection<string> references,
-        IReadOnlyCollection<BuildGraphProjectPackageReference> packageReferences
+        IReadOnlyCollection<ProjectPackageReference> packageReferences
     )
     {
         FullPath = fullPath;
@@ -18,16 +18,10 @@ public sealed class BuildGraphProject
     public string FullPath { get; }
     public IReadOnlyCollection<string> InputFiles { get; }
     public IReadOnlyCollection<string> References { get; }
-    public IReadOnlyCollection<BuildGraphProjectPackageReference> PackageReferences { get; }
+    public IReadOnlyCollection<ProjectPackageReference> PackageReferences { get; }
 
     public bool Matches(BuildGraphProject other)
     {
         return FullPath == other.FullPath;
     }
-}
-
-public sealed record BuildGraphProjectPackageReference
-{
-    public required string Name { get; init; }
-    public required string Version { get; init; }
 }
