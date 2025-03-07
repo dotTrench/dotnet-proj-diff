@@ -1,4 +1,5 @@
 ﻿using LibGit2Sharp;
+using Microsoft.Build.Definition;
 using Microsoft.Build.Evaluation;
 using Microsoft.Build.Evaluation.Context;
 using Microsoft.Build.Execution;
@@ -40,19 +41,24 @@ public static class ProjectGraphFactory
             .Select(it => new ProjectGraphEntryPoint(it))
             .ToList();
 
-        return new ProjectGraph(
+        var graph = new ProjectGraph(
             entrypoints,
             projectCollection,
             (path, globalProperties, collection) =>
             {
                 var proj = fs.LoadProject(path, globalProperties, collection);
+
                 proj.MarkDirty();
 
-                proj.ReevaluateIfNecessary(EvaluationContext.Create(EvaluationContext.SharingPolicy.Shared, fs));
-                return new ProjectInstance(proj, ProjectInstanceSettings.None);
+                return proj.CreateProjectInstance(
+                    ProjectInstanceSettings.None,
+                    EvaluationContext.Create(EvaluationContext.SharingPolicy.Shared, fs)
+                );
             },
             cancellationToken
         );
+
+        return graph;
     }
 
     public static async Task<ProjectGraph> BuildForWorkingDirectory(
@@ -66,12 +72,24 @@ public static class ProjectGraphFactory
 
         var entrypoints = (await GetProjectEntrypoints(solutionFile, fs, cancellationToken))
             .Select(it => new ProjectGraphEntryPoint(it));
-        return new ProjectGraph(
+        var graph = new ProjectGraph(
             entrypoints,
             projectCollection,
-            null,
+            (path, properties, collection) =>
+            {
+                return ProjectInstance.FromFile(
+                    path,
+                    new ProjectOptions
+                    {
+                        ProjectCollection = collection,
+                        GlobalProperties = properties,
+                    }
+                );
+            },
             cancellationToken
         );
+
+        return graph;
     }
 
 
