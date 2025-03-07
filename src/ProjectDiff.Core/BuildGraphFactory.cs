@@ -1,15 +1,11 @@
-﻿using System.Diagnostics;
+﻿using System.Collections.Frozen;
+using System.Diagnostics;
 using Microsoft.Build.Execution;
 using Microsoft.Build.Graph;
 using Microsoft.Build.Prediction;
 using Microsoft.Build.Prediction.Predictors;
 
 namespace ProjectDiff.Core;
-
-public struct ItemPredictionFilterArgs
-{
-    public string Path { get; init; }
-}
 
 public static class BuildGraphFactory
 {
@@ -21,7 +17,7 @@ public static class BuildGraphFactory
 
     public static BuildGraph CreateForProjectGraph(
         ProjectGraph graph,
-        Func<string, bool> inputFileFilter
+        FrozenSet<string> changedFiles
     )
     {
         var executor = new ProjectGraphPredictionExecutor(
@@ -29,7 +25,7 @@ public static class BuildGraphFactory
             ProjectPredictors.AllProjectPredictors
         );
 
-        var collector = new BuildGraphPredictionCollector(graph, inputFileFilter);
+        var collector = new BuildGraphPredictionCollector(graph, changedFiles);
 
         executor.PredictInputsAndOutputs(graph, collector);
 
@@ -39,16 +35,13 @@ public static class BuildGraphFactory
     private sealed class BuildGraphPredictionCollector : IProjectPredictionCollector
     {
         private readonly ProjectGraph _projectGraph;
-        private readonly Func<string, bool> _inputFileFilter;
         private readonly Dictionary<string, BuildGraphProjectCollector> _collectors;
+        private readonly FrozenSet<string> _changedFiles;
 
-        public BuildGraphPredictionCollector(
-            ProjectGraph projectGraph,
-            Func<string, bool> inputFileFilter
-        )
+        public BuildGraphPredictionCollector(ProjectGraph projectGraph, FrozenSet<string> changedFiles)
         {
             _projectGraph = projectGraph;
-            _inputFileFilter = inputFileFilter;
+            _changedFiles = changedFiles;
             _collectors = new Dictionary<string, BuildGraphProjectCollector>(_projectGraph.ProjectNodes.Count);
             foreach (var node in _projectGraph.ProjectNodes)
             {
@@ -66,8 +59,7 @@ public static class BuildGraphFactory
                 path = Path.GetFullPath(path, projectInstance.Directory);
             }
 
-            var matchesFilter = _inputFileFilter(path);
-            if (!matchesFilter)
+            if (!_changedFiles.Contains(path))
             {
                 return;
             }
@@ -95,18 +87,18 @@ public static class BuildGraphFactory
 
         public BuildGraph Build()
         {
-            var projects = BuildGraphProjects().DistinctBy(it => it.FullPath).ToList();
+            var projects = BuildGraphProjects();
 
             return new BuildGraph
             {
-                Projects = projects,
+                Projects = projects.OrderBy(it => it.References.Count).ToList(),
             };
         }
 
 
         private IEnumerable<BuildGraphProject> BuildGraphProjects()
         {
-            foreach (var node in _projectGraph.ProjectNodesTopologicallySorted)
+            foreach (var node in _projectGraph.ProjectNodes)
             {
                 if (!_collectors.TryGetValue(node.ProjectInstance.FullPath, out var collector))
                 {
@@ -114,13 +106,11 @@ public static class BuildGraphFactory
                     continue;
                 }
 
-                foreach (var reference in node.ProjectReferences)
-                {
-                    collector.AddReference(reference.ProjectInstance.FullPath);
-                }
-
-                yield return collector.ToBuildGraphProject();
+                var references = node.ProjectReferences.Select(it => it.ProjectInstance.FullPath);
+                collector.AddReferences(references);
             }
+
+            return _collectors.Values.Select(it => it.ToBuildGraphProject());
         }
     }
 
@@ -143,11 +133,11 @@ public static class BuildGraphFactory
             }
         }
 
-        public void AddReference(string path)
+        public void AddReferences(IEnumerable<string> references)
         {
-            lock (_references)
+            foreach (var reference in references)
             {
-                _references.Add(path);
+                _references.Add(reference);
             }
         }
 
@@ -155,14 +145,11 @@ public static class BuildGraphFactory
         {
             lock (_inputFiles)
             {
-                lock (_references)
-                {
-                    return new BuildGraphProject(
-                        _projectPath,
-                        _inputFiles.ToList(),
-                        _references.ToList()
-                    );
-                }
+                return new BuildGraphProject(
+                    _projectPath,
+                    _inputFiles,
+                    _references
+                );
             }
         }
     }

@@ -83,10 +83,14 @@ internal sealed class GraphDiffInstance
             return isModified;
         }
 
-        isModified = HasProjectInputFilesChanged(previous.InputFiles, current.InputFiles, modifiedFiles);
+        if (HasProjectInputFilesChanged(previous.InputFiles, current.InputFiles, modifiedFiles))
+        {
+            _modifiedProjects.Add(current.FullPath, true);
+            return true;
+        }
 
-        _modifiedProjects.Add(current.FullPath, isModified);
-        return isModified;
+        _modifiedProjects.Add(current.FullPath, false);
+        return false;
     }
 
     private static bool HasProjectInputFilesChanged(
@@ -95,6 +99,11 @@ internal sealed class GraphDiffInstance
         FrozenSet<string> modifiedFiles
     )
     {
+        if (previous.Count != current.Count)
+        {
+            return true;
+        }
+
         foreach (var file in current)
         {
             if (!previous.Contains(file))
@@ -126,6 +135,11 @@ internal sealed class GraphDiffInstance
         FrozenSet<string> modifiedFiles
     )
     {
+        if (previous.References.Count != current.References.Count)
+        {
+            return true;
+        }
+
         foreach (var reference in current.References)
         {
             if (!previous.References.Contains(reference))

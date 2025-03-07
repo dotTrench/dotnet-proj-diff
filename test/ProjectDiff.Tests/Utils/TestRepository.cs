@@ -171,4 +171,17 @@ public sealed class TestRepository : IDisposable
 
         return root.FullPath;
     }
+
+    public void UpdateProject(string path, Action<ProjectRootElement> configure)
+    {
+        var p = GetPath(path);
+        var root = ProjectRootElement.Open(p);
+        if (root is null)
+        {
+            throw new ArgumentException("Could not open project root", nameof(path));
+        }
+
+        configure(root);
+        root.Save(p);
+    }
 }

@@ -1,11 +1,9 @@
-﻿using System.Collections.Frozen;
-using System.CommandLine;
+﻿using System.CommandLine;
 using System.CommandLine.IO;
 using System.CommandLine.NamingConventionBinder;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
-using LibGit2Sharp;
 using Microsoft.Build.Construction;
 using Microsoft.Build.Evaluation;
 using ProjectDiff.Core;
@@ -86,6 +84,7 @@ public sealed class ProjectDiffCommand : RootCommand
         "Output file, if not set stdout will be used"
     );
 
+
     public ProjectDiffCommand()
     {
         Name = "dotnet-proj-diff";
@@ -123,16 +122,7 @@ public sealed class ProjectDiffCommand : RootCommand
 
 
     private async Task<int> ExecuteAsync(
-        string commit,
-        FileInfo solution,
-        bool mergeBase,
-        bool includeDeleted,
-        bool includeModified,
-        bool includeAdded,
-        bool includeReferencing,
-        bool absolutePaths,
-        OutputFormat? format,
-        FileInfo? output,
+        ProjectDiffSettings settings,
         IConsole c,
         CancellationToken cancellationToken
     )
@@ -142,98 +132,53 @@ public sealed class ProjectDiffCommand : RootCommand
             throw new InvalidOperationException("Expected IExtendedConsole");
         }
 
-        if (solution.Directory is null)
-        {
-            WriteError(console, $"Could resolve parent directory for solution '{solution.FullName}'");
-            return 1;
-        }
-
-        var solutionDirectory = solution.Directory;
-        var repoPath = Repository.Discover(solutionDirectory.FullName);
-        if (repoPath is null)
-        {
-            WriteError(console, "Repository could not be found");
-            return 1;
-        }
-
-        using var repo = new Repository(repoPath);
-        var baseCommit = repo.Lookup<Commit>(commit);
-        if (baseCommit is null)
-        {
-            WriteError(console, $"Could not find base reference {commit}");
-            return 1;
-        }
-
-        var changes = GetGitModifiedFiles(repo, baseCommit, null).ToFrozenSet();
-        if (changes.Count == 0)
-        {
-            return 0;
-        }
-
-        if (mergeBase)
-        {
-            var mergeBaseCommit = repo.ObjectDatabase.FindMergeBase(baseCommit, repo.Head.Tip);
-            if (mergeBaseCommit is null)
-            {
-                WriteError(
-                    console,
-                    $"Could not find merge base reference for {baseCommit.Sha} and {repo.Head.Tip.Sha}"
-                );
-                return 1;
-            }
-
-            baseCommit = mergeBaseCommit;
-        }
-
-
-        var toGraph = await ProjectGraphFactory.BuildForWorkingDirectory(
-            solution,
-            cancellationToken
-        );
-
-        var fromGraph = await ProjectGraphFactory.BuildForGitTree(
-            repo,
-            baseCommit.Tree,
-            solution,
-            cancellationToken
-        );
-
-        var fromBuildGraph = BuildGraphFactory.CreateForProjectGraph(fromGraph, file => changes.Contains(file));
-        var toBuildGraph = BuildGraphFactory.CreateForProjectGraph(toGraph, file => changes.Contains(file));
-
-        var diff = BuildGraphDiff.Diff(fromBuildGraph, toBuildGraph, changes).Where(ShouldInclude);
-
-        var diffOutput = new DiffOutput(output, console);
+        var diffOutput = new DiffOutput(settings.Output, console);
         OutputFormat outputFormat;
-        if (format is not null)
+        if (settings.Format is not null)
         {
-            outputFormat = format.Value;
+            outputFormat = settings.Format.Value;
         }
-        else if (output is not null)
+        else if (settings.Output is not null)
         {
-            outputFormat = GetOutputFormatFromExtension(output.Extension);
+            outputFormat = GetOutputFormatFromExtension(settings.Output.Extension);
         }
         else
         {
             outputFormat = OutputFormat.Plain;
         }
 
+        var executor = new ProjectDiffExecutor(
+            new ProjectDiffExecutorOptions
+            {
+                FindMergeBase = settings.MergeBase
+            }
+        );
+
+        var result = await executor.GetProjectDiff(settings.Solution, settings.Commit, cancellationToken);
+
+        if (result.Status != ProjectDiffExecutionStatus.Success)
+        {
+            console.Error.WriteLine(result.Status.ToString());
+            return 1;
+        }
+
+        var diff = result.Projects.Where(ShouldInclude);
         switch (outputFormat)
         {
             case OutputFormat.Plain:
-                await WritePlain(diffOutput, diff, absolutePaths);
+                await WritePlain(diffOutput, diff, settings.AbsolutePaths);
                 break;
             case OutputFormat.Json:
-                await WriteJson(diffOutput, diff, absolutePaths);
+                await WriteJson(diffOutput, diff, settings.AbsolutePaths);
                 break;
             case OutputFormat.Slnf:
-                await WriteSlnf(diffOutput, solution, diff);
+                await WriteSlnf(diffOutput, settings.Solution, diff);
                 break;
             case OutputFormat.Traversal:
-                await WriteTraversal(diffOutput, diff, absolutePaths);
+                await WriteTraversal(diffOutput, diff, settings.AbsolutePaths);
                 break;
             default:
-                WriteError(console, $"Unknown output format {format}");
+                WriteError(console, $"Unknown output format {settings.Format}");
                 return 1;
         }
 
@@ -242,10 +187,10 @@ public sealed class ProjectDiffCommand : RootCommand
         bool ShouldInclude(DiffProject project) =>
             project.Status switch
             {
-                DiffStatus.Removed when includeDeleted => true,
-                DiffStatus.Added when includeAdded => true,
-                DiffStatus.Modified when includeModified => true,
-                DiffStatus.ReferenceChanged when includeReferencing => true,
+                DiffStatus.Removed when settings.IncludeDeleted => true,
+                DiffStatus.Added when settings.IncludeAdded => true,
+                DiffStatus.Modified when settings.IncludeModified => true,
+                DiffStatus.ReferenceChanged when settings.IncludeReferencing => true,
                 _ => false
             };
     }
@@ -351,17 +296,6 @@ public sealed class ProjectDiffCommand : RootCommand
     private static void WriteError(IConsole console, string error)
     {
         console.Error.WriteLine(error);
-    }
-
-    private static IEnumerable<string> GetGitModifiedFiles(Repository repository, Commit baseCommit, Commit? headCommit)
-    {
-        using var changes = headCommit is null
-            ? repository.Diff.Compare<TreeChanges>(baseCommit.Tree, DiffTargets.WorkingDirectory | DiffTargets.Index)
-            : repository.Diff.Compare<TreeChanges>(baseCommit.Tree, headCommit.Tree);
-        foreach (var change in changes)
-        {
-            yield return Path.GetFullPath(change.Path, repository.Info.WorkingDirectory);
-        }
     }
 
     private static OutputFormat GetOutputFormatFromExtension(string extension) => extension switch

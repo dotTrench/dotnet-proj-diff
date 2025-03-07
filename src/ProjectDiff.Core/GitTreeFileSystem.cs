@@ -280,7 +280,8 @@ public sealed class GitTreeFileSystem : MSBuildFileSystemBase
         var projectRootElement = ProjectRootElement.Create(xml, projects);
         projectRootElement.FullPath = path;
 
-        var p = Project.FromProjectRootElement(projectRootElement,
+        return Project.FromProjectRootElement(
+            projectRootElement,
             new ProjectOptions
             {
                 GlobalProperties = globalProperties,
@@ -288,7 +289,5 @@ public sealed class GitTreeFileSystem : MSBuildFileSystemBase
                 LoadSettings = ProjectLoadSettings.Default | ProjectLoadSettings.RecordDuplicateButNotCircularImports
             }
         );
-
-        return p;
     }
 }
