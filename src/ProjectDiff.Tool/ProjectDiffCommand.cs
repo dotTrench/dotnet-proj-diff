@@ -86,6 +86,12 @@ public sealed class ProjectDiffCommand : RootCommand
         "Output file, if not set stdout will be used"
     );
 
+    private readonly Option<bool> _checkPackageReferences = new(
+        "--check-package-references",
+        () => false,
+        "Resolve PackageReference versions for each project and compare versions. This disables diff checking of Directory.Packages.props files. You probably want to enable this if you're using CentralPackageManagement(CPM) in NuGet"
+    );
+
     public ProjectDiffCommand()
     {
         Name = "dotnet-proj-diff";
@@ -118,6 +124,7 @@ public sealed class ProjectDiffCommand : RootCommand
         AddOption(_absolutePaths);
         AddOption(_format);
         AddOption(_outputOption);
+        AddOption(_checkPackageReferences);
         Handler = CommandHandler.Create(ExecuteAsync);
     }
 
