@@ -31,7 +31,7 @@ public sealed class IgnoreChangesTests
         var executor = new ProjectDiffExecutor(
             new ProjectDiffExecutorOptions
             {
-                IgnoredFilePatterns = ["*.cs"]
+                IgnoreChangedFiles = [new FileInfo(repo.GetPath("Core/Sample.cs"))]
             }
         );
         var diff = await executor.GetProjectDiff(new FileInfo(sln), "HEAD");
@@ -66,7 +66,7 @@ public sealed class IgnoreChangesTests
         var executor = new ProjectDiffExecutor(
             new ProjectDiffExecutorOptions
             {
-                IgnoredFilePatterns = ["*.cs"]
+                IgnoreChangedFiles = [new FileInfo(repo.GetPath("Core/MyClass.cs"))]
             }
         );
 
@@ -104,7 +104,7 @@ public sealed class IgnoreChangesTests
         var executor = new ProjectDiffExecutor(
             new ProjectDiffExecutorOptions
             {
-                IgnoredFilePatterns = ["*.cs"]
+                IgnoreChangedFiles = [new FileInfo(repo.GetPath("Core/Sample.cs"))]
             }
         );
         var diff = await executor.GetProjectDiff(new FileInfo(sln), "HEAD");

@@ -12,5 +12,5 @@ public sealed class ProjectDiffSettings
     public bool AbsolutePaths { get; init; }
     public OutputFormat? Format { get; init; }
     public FileInfo? Output { get; init; }
-    public string[] IgnoreChangedFile { get; init; } = [];
+    public FileInfo[] IgnoreChangedFile { get; init; } = [];
 }

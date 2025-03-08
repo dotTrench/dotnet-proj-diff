@@ -84,10 +84,10 @@ public sealed class ProjectDiffCommand : RootCommand
         "Output file, if not set stdout will be used"
     );
 
-    private static readonly Option<string[]> IgnoreChangedFilesOption = new(
+    private static readonly Option<FileInfo[]> IgnoreChangedFilesOption = new(
         "--ignore-changed-file",
         () => [],
-        "Ignores changed file pattern, accepts simple file system expressions e.g. '*.csproj'"
+        "Ignore changes in specific files. If these files are a part of the build evaluation process they will still be evaluated, however these files will be considered unchanged by the diff process"
     );
 
     private readonly IExtendedConsole _console;
@@ -155,7 +155,7 @@ public sealed class ProjectDiffCommand : RootCommand
             new ProjectDiffExecutorOptions
             {
                 FindMergeBase = settings.MergeBase,
-                IgnoredFilePatterns = settings.IgnoreChangedFile,
+                IgnoreChangedFiles = settings.IgnoreChangedFile,
             }
         );
 

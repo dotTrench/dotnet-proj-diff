@@ -1,5 +1,4 @@
 ﻿using System.Collections.Frozen;
-using System.IO.Enumeration;
 using LibGit2Sharp;
 
 namespace ProjectDiff.Core;
@@ -7,7 +6,7 @@ namespace ProjectDiff.Core;
 public sealed class ProjectDiffExecutorOptions
 {
     public bool FindMergeBase { get; init; }
-    public string[] IgnoredFilePatterns { get; init; } = [];
+    public FileInfo[] IgnoreChangedFiles { get; init; } = [];
 }
 
 public class ProjectDiffExecutor
@@ -101,22 +100,27 @@ public class ProjectDiffExecutor
 
         bool ShouldIncludeFile(string file)
         {
-            if (_options.IgnoredFilePatterns.Length == 0)
+            if (_options.IgnoreChangedFiles.Length == 0)
             {
                 return true;
             }
 
-            return !_options.IgnoredFilePatterns.Any(
-                pattern => FileSystemName.MatchesSimpleExpression(pattern, file, false)
-            );
+            return _options.IgnoreChangedFiles.All(it => it.FullName != file);
         }
     }
 
 
-    private static IEnumerable<string> GetGitModifiedFiles(Repository repository, Commit baseCommit, Commit? headCommit)
+    private static IEnumerable<string> GetGitModifiedFiles(
+        Repository repository,
+        Commit baseCommit,
+        Commit? headCommit
+    )
     {
         using var changes = headCommit is null
-            ? repository.Diff.Compare<TreeChanges>(baseCommit.Tree, DiffTargets.WorkingDirectory | DiffTargets.Index)
+            ? repository.Diff.Compare<TreeChanges>(
+                baseCommit.Tree,
+                DiffTargets.WorkingDirectory | DiffTargets.Index
+            )
             : repository.Diff.Compare<TreeChanges>(baseCommit.Tree, headCommit.Tree);
         foreach (var change in changes)
         {
