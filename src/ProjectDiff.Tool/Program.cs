@@ -1,10 +1,8 @@
-﻿using System.CommandLine.Parsing;
-using Microsoft.Build.Locator;
+﻿using Microsoft.Build.Locator;
 using ProjectDiff.Tool;
 
 MSBuildLocator.RegisterDefaults();
 
-var cli = ProjectDiffTool.BuildParser();
+var tool = ProjectDiffTool.Create(new ExtendedConsole());
 
-
-return await cli.InvokeAsync(args, new ExtendedConsole());
+return await tool.InvokeAsync(args);

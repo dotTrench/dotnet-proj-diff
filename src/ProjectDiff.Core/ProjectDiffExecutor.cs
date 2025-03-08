@@ -1,27 +1,13 @@
 ﻿using System.Collections.Frozen;
+using System.IO.Enumeration;
 using LibGit2Sharp;
 
 namespace ProjectDiff.Core;
 
-public sealed record ProjectDiffResult
-{
-    public required ProjectDiffExecutionStatus Status { get; set; }
-    public IEnumerable<DiffProject> Projects { get; set; } = [];
-}
-
-public enum ProjectDiffExecutionStatus
-{
-    Success,
-
-    RepositoryNotFound,
-    CommitNotFound,
-    MergeBaseNotFound,
-    NoChangedFiles,
-}
-
 public sealed class ProjectDiffExecutorOptions
 {
     public bool FindMergeBase { get; init; }
+    public string[] IgnoredFilePatterns { get; init; } = [];
 }
 
 public class ProjectDiffExecutor
@@ -76,12 +62,17 @@ public class ProjectDiffExecutor
             baseCommit = mergeBaseCommit;
         }
 
-        var changes = GetGitModifiedFiles(repo, baseCommit, null).ToFrozenSet();
-        if (changes.Count == 0)
+        var changedFiles = GetGitModifiedFiles(repo, baseCommit, null)
+            .Where(ShouldIncludeFile)
+            .ToFrozenSet();
+
+        if (changedFiles.Count == 0)
         {
             return new ProjectDiffResult
             {
-                Status = ProjectDiffExecutionStatus.NoChangedFiles
+                Status = ProjectDiffExecutionStatus.Success,
+                ChangedFiles = [],
+                Projects = []
             };
         }
 
@@ -98,14 +89,27 @@ public class ProjectDiffExecutor
             cancellationToken
         );
 
-        var toBuildGraph = BuildGraphFactory.CreateForProjectGraph(toGraph, changes);
-        var fromBuildGraph = BuildGraphFactory.CreateForProjectGraph(fromGraph, changes);
+        var toBuildGraph = BuildGraphFactory.CreateForProjectGraph(toGraph, changedFiles);
+        var fromBuildGraph = BuildGraphFactory.CreateForProjectGraph(fromGraph, changedFiles);
 
         return new ProjectDiffResult
         {
             Status = ProjectDiffExecutionStatus.Success,
-            Projects = BuildGraphDiff.Diff(fromBuildGraph, toBuildGraph, changes),
+            ChangedFiles = changedFiles,
+            Projects = BuildGraphDiff.Diff(fromBuildGraph, toBuildGraph, changedFiles),
         };
+
+        bool ShouldIncludeFile(string file)
+        {
+            if (_options.IgnoredFilePatterns.Length == 0)
+            {
+                return true;
+            }
+
+            return !_options.IgnoredFilePatterns.Any(
+                pattern => FileSystemName.MatchesSimpleExpression(pattern, file, false)
+            );
+        }
     }
 
 

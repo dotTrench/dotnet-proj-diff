@@ -1,20 +1,10 @@
-﻿using System.CommandLine.IO;
-using System.CommandLine.Parsing;
-using ProjectDiff.Tests.Utils;
+﻿using ProjectDiff.Tests.Utils;
 using ProjectDiff.Tool;
-using Xunit.Abstractions;
 
 namespace ProjectDiff.Tests.Tool;
 
 public sealed class ProjectDiffTests
 {
-    private readonly ITestOutputHelper _helper;
-
-    public ProjectDiffTests(ITestOutputHelper helper)
-    {
-        _helper = helper;
-    }
-
     public static TheoryData<OutputFormat> OutputFormats => new(Enum.GetValues<OutputFormat>());
 
 
@@ -315,8 +305,8 @@ public sealed class ProjectDiffTests
     private async Task<string> ExecuteAndReadStdout(TestRepository repository, params string[] args)
     {
         var console = new ExtendedTestConsole(repository.WorkingDirectory);
-        var parser = ProjectDiffTool.BuildParser();
-        var exitCode = await parser.InvokeAsync(args, console);
+        var tool = ProjectDiffTool.Create(console);
+        var exitCode = await tool.InvokeAsync(args);
         if (exitCode != 0)
         {
             Assert.Fail($"Program exited with exit code {exitCode}: {console.Error}");
