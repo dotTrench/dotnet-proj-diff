@@ -84,6 +84,12 @@ public sealed class ProjectDiffCommand : RootCommand
         "Output file, if not set stdout will be used"
     );
 
+    private static readonly Option<string[]> IgnoreChangedFilesOption = new(
+        "--ignore-changed-file",
+        () => [],
+        "Ignores changed file pattern, accepts simple file system expressions e.g. '*.csproj'"
+    );
+
     private readonly IExtendedConsole _console;
 
 
@@ -120,6 +126,7 @@ public sealed class ProjectDiffCommand : RootCommand
         AddOption(AbsolutePaths);
         AddOption(Format);
         AddOption(OutputOption);
+        AddOption(IgnoreChangedFilesOption);
         Handler = CommandHandler.Create(ExecuteAsync);
     }
 
@@ -147,11 +154,16 @@ public sealed class ProjectDiffCommand : RootCommand
         var executor = new ProjectDiffExecutor(
             new ProjectDiffExecutorOptions
             {
-                FindMergeBase = settings.MergeBase
+                FindMergeBase = settings.MergeBase,
+                IgnoredFilePatterns = settings.IgnoreChangedFile,
             }
         );
 
-        var result = await executor.GetProjectDiff(settings.Solution, settings.Commit, cancellationToken);
+        var result = await executor.GetProjectDiff(
+            settings.Solution,
+            settings.Commit,
+            cancellationToken
+        );
 
         if (result.Status != ProjectDiffExecutionStatus.Success)
         {
