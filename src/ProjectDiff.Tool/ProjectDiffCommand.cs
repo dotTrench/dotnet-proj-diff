@@ -21,7 +21,7 @@ public sealed class ProjectDiffCommand : RootCommand
             }
         };
 
-    private readonly Argument<FileInfo> _solutionArgument = new(
+    private static readonly Argument<FileInfo> SolutionArgument = new(
         "solution",
         "Path to solution file to derive projects from"
     )
@@ -29,7 +29,7 @@ public sealed class ProjectDiffCommand : RootCommand
         Arity = ArgumentArity.ExactlyOne
     };
 
-    private readonly Argument<string> _commitArgument = new(
+    private static readonly Argument<string> CommitArgument = new(
         "commit",
         () => "HEAD",
         "Base git reference to compare against"
@@ -38,58 +38,61 @@ public sealed class ProjectDiffCommand : RootCommand
         Arity = ArgumentArity.ZeroOrOne
     };
 
-    private readonly Option<bool> _mergeBaseOption = new(
+    private static readonly Option<bool> MergeBaseOption = new(
         "--merge-base",
         () => true,
         "If true instead of using <commit> use the merge base of <commit> and HEAD"
     );
 
-    private readonly Option<bool> _includeDeleted = new(
+    private static readonly Option<bool> IncludeDeleted = new(
         "--include-deleted",
         () => false,
         "If true deleted projects will be included in output"
     );
 
-    private readonly Option<bool> _includeModified = new(
+    private static readonly Option<bool> IncludeModified = new(
         "--include-modified",
         () => true,
         "If true modified projects will be included in output"
     );
 
-    private readonly Option<bool> _includeAdded = new(
+    private static readonly Option<bool> IncludeAdded = new(
         "--include-added",
         () => true,
         "If true added projects will be included in output"
     );
 
-    private readonly Option<bool> _includeReferencing = new(
+    private static readonly Option<bool> IncludeReferencing = new(
         "--include-referencing",
         () => true,
         "if true  projects referencing modified/deleted/added projects will be included in output"
     );
 
-    private readonly Option<OutputFormat?> _format = new(
+    private static readonly Option<OutputFormat?> Format = new(
         "--format",
         "Output format, if --output is specified format will be derived from file extension. Otherwise this defaults to 'plain'"
     );
 
-    private readonly Option<bool> _absolutePaths = new(
+    private static readonly Option<bool> AbsolutePaths = new(
         "--absolute-paths",
         () => false,
         "Output absolute paths, if not specified paths will be relative to the working directory. Or relative to --output if specified. This option will not affect slnf format as this requires relative paths"
     );
 
-    private readonly Option<FileInfo?> _outputOption = new(
+    private static readonly Option<FileInfo?> OutputOption = new(
         "--output",
         "Output file, if not set stdout will be used"
     );
 
+    private readonly IExtendedConsole _console;
 
-    public ProjectDiffCommand()
+
+    public ProjectDiffCommand(IExtendedConsole console)
     {
+        _console = console;
         Name = "dotnet-proj-diff";
 
-        _solutionArgument.AddValidator(
+        SolutionArgument.AddValidator(
             x =>
             {
                 var f = x.GetValueOrDefault<FileInfo?>();
@@ -107,32 +110,26 @@ public sealed class ProjectDiffCommand : RootCommand
                 }
             }
         );
-        AddArgument(_solutionArgument);
-        AddArgument(_commitArgument);
-        AddOption(_mergeBaseOption);
-        AddOption(_includeDeleted);
-        AddOption(_includeModified);
-        AddOption(_includeAdded);
-        AddOption(_includeReferencing);
-        AddOption(_absolutePaths);
-        AddOption(_format);
-        AddOption(_outputOption);
+        AddArgument(SolutionArgument);
+        AddArgument(CommitArgument);
+        AddOption(MergeBaseOption);
+        AddOption(IncludeDeleted);
+        AddOption(IncludeModified);
+        AddOption(IncludeAdded);
+        AddOption(IncludeReferencing);
+        AddOption(AbsolutePaths);
+        AddOption(Format);
+        AddOption(OutputOption);
         Handler = CommandHandler.Create(ExecuteAsync);
     }
 
 
     private async Task<int> ExecuteAsync(
         ProjectDiffSettings settings,
-        IConsole c,
         CancellationToken cancellationToken
     )
     {
-        if (c is not IExtendedConsole console)
-        {
-            throw new InvalidOperationException("Expected IExtendedConsole");
-        }
-
-        var diffOutput = new DiffOutput(settings.Output, console);
+        var diffOutput = new DiffOutput(settings.Output, _console);
         OutputFormat outputFormat;
         if (settings.Format is not null)
         {
@@ -158,7 +155,7 @@ public sealed class ProjectDiffCommand : RootCommand
 
         if (result.Status != ProjectDiffExecutionStatus.Success)
         {
-            console.Error.WriteLine(result.Status.ToString());
+            _console.Error.WriteLine(result.Status.ToString());
             return 1;
         }
 
@@ -178,7 +175,7 @@ public sealed class ProjectDiffCommand : RootCommand
                 await WriteTraversal(diffOutput, diff, settings.AbsolutePaths);
                 break;
             default:
-                WriteError(console, $"Unknown output format {settings.Format}");
+                WriteError(_console, $"Unknown output format {settings.Format}");
                 return 1;
         }
 

@@ -4,11 +4,33 @@ using System.CommandLine.Parsing;
 
 namespace ProjectDiff.Tool;
 
-public static class ProjectDiffTool
+public class ProjectDiffTool
 {
-    public static Parser BuildParser()
+    private readonly Parser _parser;
+    private readonly IExtendedConsole _console;
+
+    private ProjectDiffTool(Parser parser, IExtendedConsole console)
     {
-        return new CommandLineBuilder(new ProjectDiffCommand())
+        _parser = parser;
+        _console = console;
+    }
+
+
+    public Task<int> InvokeAsync(string[] args)
+    {
+        return _parser.InvokeAsync(args, _console);
+    }
+
+
+    public static ProjectDiffTool Create(IExtendedConsole console)
+    {
+        var parser = BuildParser(console);
+        return new ProjectDiffTool(parser, console);
+    }
+
+    private static Parser BuildParser(IExtendedConsole console)
+    {
+        return new CommandLineBuilder(new ProjectDiffCommand(console))
             .UseVersionOption()
             .UseHelp()
             .UseParseDirective()
