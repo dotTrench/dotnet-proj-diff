@@ -97,7 +97,7 @@ public sealed class ProjectDiffCommand : RootCommand
     {
         _console = console;
         Name = "dotnet-proj-diff";
-
+        Description = "Calculate which projects in a solution has changed since a specific commit";
         SolutionArgument.AddValidator(
             x =>
             {
@@ -268,7 +268,7 @@ public sealed class ProjectDiffCommand : RootCommand
             var projectPath = Path.GetRelativePath(
                 solution.Directory!.FullName,
                 project.Path
-            ).Replace('\\', '/');
+            ).Replace('/', '\\');
             projects.Add(projectPath);
         }
 
