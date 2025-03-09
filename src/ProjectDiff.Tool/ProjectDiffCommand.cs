@@ -40,7 +40,6 @@ public sealed class ProjectDiffCommand : RootCommand
 
     private static readonly Option<string?> HeadCommitOption = new(
         ["--head"],
-        () => null,
         "Head git reference to compare against. If not specified current working tree will be used"
     )
     {
@@ -50,7 +49,7 @@ public sealed class ProjectDiffCommand : RootCommand
     private static readonly Option<bool> MergeBaseOption = new(
         "--merge-base",
         () => true,
-        "If true instead of using <commit> use the merge base of <commit> and HEAD"
+        "If true instead of using --base use the merge base of --base and --head as the --base reference, if --head is not specified 'HEAD' will be used"
     );
 
     private static readonly Option<bool> IncludeDeleted = new(
@@ -327,22 +326,13 @@ public sealed class ProjectDiffCommand : RootCommand
     };
 
 
-    private sealed class DiffOutput
+    private sealed class DiffOutput(FileInfo? outputFile, IExtendedConsole console)
     {
-        private readonly FileInfo? _outputFile;
-        private readonly IExtendedConsole _console;
-
-        public DiffOutput(FileInfo? outputFile, IExtendedConsole console)
-        {
-            _outputFile = outputFile;
-            _console = console;
-        }
-
-        public string RootDirectory => _outputFile?.DirectoryName ?? _console.WorkingDirectory;
+        public string RootDirectory => outputFile?.DirectoryName ?? console.WorkingDirectory;
 
         public Stream Open()
         {
-            return _outputFile?.Create() ?? _console.OpenStandardOutput();
+            return outputFile?.Create() ?? console.OpenStandardOutput();
         }
     }
 }
