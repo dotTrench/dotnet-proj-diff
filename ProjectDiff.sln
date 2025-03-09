@@ -10,6 +10,13 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{D1BF8E7B-2C8
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{3BE889F7-7E1F-4FB0-B257-F85C176A5443}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{7918717A-C13C-48E9-8715-8A966A69D3DA}"
+	ProjectSection(SolutionItems) = preProject
+		docs\github.md = docs\github.md
+		docs\central-package-management.md = docs\central-package-management.md
+		docs\formats.md = docs\formats.md
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
