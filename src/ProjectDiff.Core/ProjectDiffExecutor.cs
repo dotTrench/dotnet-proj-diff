@@ -1,13 +1,8 @@
 ﻿using System.Collections.Frozen;
 using LibGit2Sharp;
+using Microsoft.Build.Graph;
 
 namespace ProjectDiff.Core;
-
-public sealed class ProjectDiffExecutorOptions
-{
-    public bool FindMergeBase { get; init; }
-    public FileInfo[] IgnoreChangedFiles { get; init; } = [];
-}
 
 public class ProjectDiffExecutor
 {
@@ -20,7 +15,8 @@ public class ProjectDiffExecutor
 
     public async Task<ProjectDiffResult> GetProjectDiff(
         FileInfo solutionFile,
-        string commitRef,
+        string baseCommitRef = "HEAD",
+        string? headCommitRef = null,
         CancellationToken cancellationToken = default
     )
     {
@@ -38,18 +34,36 @@ public class ProjectDiffExecutor
         }
 
         using var repo = new Repository(repoPath);
-        var baseCommit = repo.Lookup<Commit>(commitRef);
+        var baseCommit = repo.Lookup<Commit>(baseCommitRef);
         if (baseCommit is null)
         {
             return new ProjectDiffResult
             {
-                Status = ProjectDiffExecutionStatus.CommitNotFound,
+                Status = ProjectDiffExecutionStatus.BaseCommitNotFound,
             };
+        }
+
+        Commit? headCommit;
+        if (headCommitRef is not null)
+        {
+            headCommit = repo.Lookup<Commit>(headCommitRef);
+
+            if (headCommit is null)
+            {
+                return new ProjectDiffResult
+                {
+                    Status = ProjectDiffExecutionStatus.HeadCommitNotFound
+                };
+            }
+        }
+        else
+        {
+            headCommit = null;
         }
 
         if (_options.FindMergeBase)
         {
-            var mergeBaseCommit = repo.ObjectDatabase.FindMergeBase(baseCommit, repo.Head.Tip);
+            var mergeBaseCommit = repo.ObjectDatabase.FindMergeBase(baseCommit, headCommit ?? repo.Head.Tip);
             if (mergeBaseCommit is null)
             {
                 return new ProjectDiffResult
@@ -61,7 +75,7 @@ public class ProjectDiffExecutor
             baseCommit = mergeBaseCommit;
         }
 
-        var changedFiles = GetGitModifiedFiles(repo, baseCommit, null)
+        var changedFiles = GetGitModifiedFiles(repo, baseCommit, headCommit)
             .Where(ShouldIncludeFile)
             .ToFrozenSet();
 
@@ -75,18 +89,31 @@ public class ProjectDiffExecutor
             };
         }
 
-
-        var toGraph = await ProjectGraphFactory.BuildForWorkingDirectory(
-            solutionFile,
-            cancellationToken
-        );
-
         var fromGraph = await ProjectGraphFactory.BuildForGitTree(
             repo,
             baseCommit.Tree,
             solutionFile,
             cancellationToken
         );
+
+        ProjectGraph toGraph;
+        if (headCommit is null)
+        {
+            toGraph = await ProjectGraphFactory.BuildForWorkingDirectory(
+                solutionFile,
+                cancellationToken
+            );
+        }
+        else
+        {
+            toGraph = await ProjectGraphFactory.BuildForGitTree(
+                repo,
+                headCommit.Tree,
+                solutionFile,
+                cancellationToken
+            );
+        }
+
 
         var toBuildGraph = BuildGraphFactory.CreateForProjectGraph(toGraph, changedFiles);
         var fromBuildGraph = BuildGraphFactory.CreateForProjectGraph(fromGraph, changedFiles);

@@ -29,13 +29,22 @@ public sealed class ProjectDiffCommand : RootCommand
         Arity = ArgumentArity.ExactlyOne
     };
 
-    private static readonly Argument<string> CommitArgument = new(
-        "commit",
+    private static readonly Option<string> BaseCommitOption = new(
+        ["--base"],
         () => "HEAD",
         "Base git reference to compare against"
     )
     {
-        Arity = ArgumentArity.ZeroOrOne
+        IsRequired = true
+    };
+
+    private static readonly Option<string?> HeadCommitOption = new(
+        ["--head"],
+        () => null,
+        "Head git reference to compare against. If not specified current working tree will be used"
+    )
+    {
+        IsRequired = false
     };
 
     private static readonly Option<bool> MergeBaseOption = new(
@@ -69,7 +78,7 @@ public sealed class ProjectDiffCommand : RootCommand
     );
 
     private static readonly Option<OutputFormat?> Format = new(
-        "--format",
+        ["--format", "-f"],
         "Output format, if --output is specified format will be derived from file extension. Otherwise this defaults to 'plain'"
     );
 
@@ -80,7 +89,7 @@ public sealed class ProjectDiffCommand : RootCommand
     );
 
     private static readonly Option<FileInfo?> OutputOption = new(
-        "--output",
+        ["--output", "--out", "-o"],
         "Output file, if not set stdout will be used"
     );
 
@@ -117,7 +126,8 @@ public sealed class ProjectDiffCommand : RootCommand
             }
         );
         AddArgument(SolutionArgument);
-        AddArgument(CommitArgument);
+        AddOption(BaseCommitOption);
+        AddOption(HeadCommitOption);
         AddOption(MergeBaseOption);
         AddOption(IncludeDeleted);
         AddOption(IncludeModified);
@@ -161,7 +171,8 @@ public sealed class ProjectDiffCommand : RootCommand
 
         var result = await executor.GetProjectDiff(
             settings.Solution,
-            settings.Commit,
+            settings.Base,
+            settings.Head,
             cancellationToken
         );
 
