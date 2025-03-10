@@ -30,7 +30,7 @@ public sealed class ProjectDiffCommand : RootCommand
     };
 
     private static readonly Option<string> BaseCommitOption = new(
-        ["--base"],
+        ["--base-ref", "--base"],
         () => "HEAD",
         "Base git reference to compare against"
     )
@@ -39,7 +39,7 @@ public sealed class ProjectDiffCommand : RootCommand
     };
 
     private static readonly Option<string?> HeadCommitOption = new(
-        ["--head"],
+        ["--head-ref", "--head"],
         "Head git reference to compare against. If not specified current working tree will be used"
     )
     {
@@ -170,8 +170,8 @@ public sealed class ProjectDiffCommand : RootCommand
 
         var result = await executor.GetProjectDiff(
             settings.Solution,
-            settings.Base,
-            settings.Head,
+            settings.BaseRef,
+            settings.HeadRef,
             cancellationToken
         );
 
