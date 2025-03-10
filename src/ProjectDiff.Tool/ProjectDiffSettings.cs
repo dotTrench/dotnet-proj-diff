@@ -2,7 +2,8 @@
 
 public sealed class ProjectDiffSettings
 {
-    public required string Commit { get; init; }
+    public required string BaseRef { get; init; }
+    public string? HeadRef { get; init; }
     public required FileInfo Solution { get; init; }
     public bool MergeBase { get; init; } = true;
     public bool IncludeDeleted { get; init; }

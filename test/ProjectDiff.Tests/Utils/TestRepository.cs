@@ -18,12 +18,32 @@ public sealed class TestRepository : IDisposable
 
     public static async Task<SetupResult<T>> SetupAsync<T>(Func<TestRepository, Task<T>> setup)
     {
-        var directory = Directory.CreateTempSubdirectory("delta-test");
+        var directory = Directory.CreateTempSubdirectory("dotnet-proj-diff-test");
 
         var repository = new TestRepository(Repository.Init(directory.FullName));
         var result = await setup(repository);
         repository.StageAndCommitAllChanges();
         return new SetupResult<T>(result, repository);
+    }
+
+    public static async Task<TestRepository> SetupAsync(Func<TestRepository, Task> setup)
+    {
+        var directory = Directory.CreateTempSubdirectory("dotnet-proj-diff-test");
+
+        var repository = new TestRepository(Repository.Init(directory.FullName));
+        await setup(repository);
+        repository.StageAndCommitAllChanges();
+        return repository;
+    }
+
+
+    public static TestRepository CreateEmpty()
+    {
+        var directory = Directory.CreateTempSubdirectory("dotnet-proj-diff-test");
+
+        var repository = new TestRepository(Repository.Init(directory.FullName));
+        repository.StageAndCommitAllChanges();
+        return repository;
     }
 
     public Repository Repository => _repository;

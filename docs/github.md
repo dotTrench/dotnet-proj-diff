@@ -68,7 +68,7 @@ jobs:
           uses: nrwl/nx-set-shas@v4
 
         - name: Run dotnet-proj-diff
-          run: dotnet-proj-diff <YOUR_SOLUTION_FILE> ${{ env.NX_BASE }} --output /tmp/diff.slnf
+          run: dotnet-proj-diff <YOUR_SOLUTION_FILE> --base ${{ env.NX_BASE }} --output /tmp/diff.slnf
 
         - name: Restore solution
           run: dotnet restore /tmp/diff.slnf

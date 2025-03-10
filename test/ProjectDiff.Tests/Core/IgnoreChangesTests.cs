@@ -25,7 +25,7 @@ public sealed class IgnoreChangesTests
 
 
         var (sln, repo) = res;
-        
+
         repo.WriteAllText("Core/Sample.cs", "// New content here");
 
         var executor = new ProjectDiffExecutor(
@@ -34,7 +34,7 @@ public sealed class IgnoreChangesTests
                 IgnoreChangedFiles = [new FileInfo(repo.GetPath("Core/Sample.cs"))]
             }
         );
-        var diff = await executor.GetProjectDiff(new FileInfo(sln), "HEAD");
+        var diff = await executor.GetProjectDiff(new FileInfo(sln));
         Assert.Equal(ProjectDiffExecutionStatus.Success, diff.Status);
 
         Assert.Empty(diff.Projects);
@@ -70,13 +70,13 @@ public sealed class IgnoreChangesTests
             }
         );
 
-        var diff = await executor.GetProjectDiff(new FileInfo(sln), "HEAD");
+        var diff = await executor.GetProjectDiff(new FileInfo(sln));
         Assert.Equal(ProjectDiffExecutionStatus.Success, diff.Status);
 
         Assert.Empty(diff.Projects);
-        
+
         var changedFile = Assert.Single(diff.ChangedFiles);
-        
+
         Assert.Matches("README.md", changedFile);
     }
 
@@ -107,7 +107,7 @@ public sealed class IgnoreChangesTests
                 IgnoreChangedFiles = [new FileInfo(repo.GetPath("Core/Sample.cs"))]
             }
         );
-        var diff = await executor.GetProjectDiff(new FileInfo(sln), "HEAD");
+        var diff = await executor.GetProjectDiff(new FileInfo(sln));
         Assert.Equal(ProjectDiffExecutionStatus.Success, diff.Status);
 
         Assert.Empty(diff.Projects);

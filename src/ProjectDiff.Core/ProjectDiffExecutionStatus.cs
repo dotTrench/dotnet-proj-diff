@@ -5,6 +5,7 @@ public enum ProjectDiffExecutionStatus
     Success,
 
     RepositoryNotFound,
-    CommitNotFound,
+    BaseCommitNotFound,
+    HeadCommitNotFound,
     MergeBaseNotFound,
 }

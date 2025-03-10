@@ -29,19 +29,27 @@ public sealed class ProjectDiffCommand : RootCommand
         Arity = ArgumentArity.ExactlyOne
     };
 
-    private static readonly Argument<string> CommitArgument = new(
-        "commit",
+    private static readonly Option<string> BaseCommitOption = new(
+        ["--base-ref", "--base"],
         () => "HEAD",
         "Base git reference to compare against"
     )
     {
-        Arity = ArgumentArity.ZeroOrOne
+        IsRequired = true
+    };
+
+    private static readonly Option<string?> HeadCommitOption = new(
+        ["--head-ref", "--head"],
+        "Head git reference to compare against. If not specified current working tree will be used"
+    )
+    {
+        IsRequired = false
     };
 
     private static readonly Option<bool> MergeBaseOption = new(
         "--merge-base",
         () => true,
-        "If true instead of using <commit> use the merge base of <commit> and HEAD"
+        "If true instead of using --base use the merge base of --base and --head as the --base reference, if --head is not specified 'HEAD' will be used"
     );
 
     private static readonly Option<bool> IncludeDeleted = new(
@@ -69,7 +77,7 @@ public sealed class ProjectDiffCommand : RootCommand
     );
 
     private static readonly Option<OutputFormat?> Format = new(
-        "--format",
+        ["--format", "-f"],
         "Output format, if --output is specified format will be derived from file extension. Otherwise this defaults to 'plain'"
     );
 
@@ -80,7 +88,7 @@ public sealed class ProjectDiffCommand : RootCommand
     );
 
     private static readonly Option<FileInfo?> OutputOption = new(
-        "--output",
+        ["--output", "--out", "-o"],
         "Output file, if not set stdout will be used"
     );
 
@@ -117,7 +125,8 @@ public sealed class ProjectDiffCommand : RootCommand
             }
         );
         AddArgument(SolutionArgument);
-        AddArgument(CommitArgument);
+        AddOption(BaseCommitOption);
+        AddOption(HeadCommitOption);
         AddOption(MergeBaseOption);
         AddOption(IncludeDeleted);
         AddOption(IncludeModified);
@@ -161,7 +170,8 @@ public sealed class ProjectDiffCommand : RootCommand
 
         var result = await executor.GetProjectDiff(
             settings.Solution,
-            settings.Commit,
+            settings.BaseRef,
+            settings.HeadRef,
             cancellationToken
         );
 
@@ -316,22 +326,13 @@ public sealed class ProjectDiffCommand : RootCommand
     };
 
 
-    private sealed class DiffOutput
+    private sealed class DiffOutput(FileInfo? outputFile, IExtendedConsole console)
     {
-        private readonly FileInfo? _outputFile;
-        private readonly IExtendedConsole _console;
-
-        public DiffOutput(FileInfo? outputFile, IExtendedConsole console)
-        {
-            _outputFile = outputFile;
-            _console = console;
-        }
-
-        public string RootDirectory => _outputFile?.DirectoryName ?? _console.WorkingDirectory;
+        public string RootDirectory => outputFile?.DirectoryName ?? console.WorkingDirectory;
 
         public Stream Open()
         {
-            return _outputFile?.Create() ?? _console.OpenStandardOutput();
+            return outputFile?.Create() ?? console.OpenStandardOutput();
         }
     }
 }
