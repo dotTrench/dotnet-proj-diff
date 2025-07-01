@@ -8,8 +8,7 @@ public sealed class BranchTests
     [Fact]
     public async Task AddProjectInNewBranch()
     {
-        using var repo = await TestRepository.SetupAsync(
-            static async repo =>
+        using var repo = await TestRepository.SetupAsync(static async repo =>
             {
                 await repo.CreateSolutionAsync("Sample.sln", _ => { }); // Create an empty solution
             }
@@ -26,7 +25,12 @@ public sealed class BranchTests
 
         var executor = new ProjectDiffExecutor(new ProjectDiffExecutorOptions());
 
-        var result = await executor.GetProjectDiff(new FileInfo(sln), "master", "feature");
+        var result = await executor.GetProjectDiff(
+            new FileInfo(sln),
+            "master",
+            "feature",
+            TestContext.Current.CancellationToken
+        );
 
         Assert.Equal(ProjectDiffExecutionStatus.Success, result.Status);
         var diffProject = Assert.Single(result.Projects);
@@ -38,8 +42,7 @@ public sealed class BranchTests
     [Fact]
     public async Task RemoveProjectInNewBranch()
     {
-        using var res = await TestRepository.SetupAsync(
-            static async repo =>
+        using var res = await TestRepository.SetupAsync(static async repo =>
             {
                 var sln = await repo.CreateSolutionAsync("Sample.sln", sln => sln.AddProject("Sample/Sample.csproj"));
                 var project = repo.CreateProject(
@@ -60,7 +63,12 @@ public sealed class BranchTests
         repo.StageAndCommitAllChanges();
 
         var executor = new ProjectDiffExecutor(new ProjectDiffExecutorOptions());
-        var result = await executor.GetProjectDiff(new FileInfo(sln), "master", "feature");
+        var result = await executor.GetProjectDiff(
+            new FileInfo(sln),
+            "master",
+            "feature",
+            TestContext.Current.CancellationToken
+        );
 
         Assert.Equal(ProjectDiffExecutionStatus.Success, result.Status);
         var diffProject = Assert.Single(result.Projects);
@@ -72,8 +80,7 @@ public sealed class BranchTests
     [Fact]
     public async Task ModifyProjectInNewBranch()
     {
-        using var res = await TestRepository.SetupAsync(
-            static async repo =>
+        using var res = await TestRepository.SetupAsync(static async repo =>
             {
                 var sln = await repo.CreateSolutionAsync("Sample.sln", sln => sln.AddProject("Sample/Sample.csproj"));
                 var project = repo.CreateProject(
@@ -90,7 +97,12 @@ public sealed class BranchTests
         await repo.WriteFileAsync("Sample/MyClass.cs", "// Some new content");
         repo.StageAndCommitAllChanges();
         var executor = new ProjectDiffExecutor(new ProjectDiffExecutorOptions());
-        var result = await executor.GetProjectDiff(new FileInfo(sln), "master", "feature");
+        var result = await executor.GetProjectDiff(
+            new FileInfo(sln),
+            "master",
+            "feature",
+            TestContext.Current.CancellationToken
+        );
 
         Assert.Equal(ProjectDiffExecutionStatus.Success, result.Status);
         var diffProject = Assert.Single(result.Projects);
@@ -101,8 +113,7 @@ public sealed class BranchTests
     [Fact]
     public async Task ModifyProjectInBaseBranch_WithNoMergeBaseOption()
     {
-        using var res = await TestRepository.SetupAsync(
-            static async repo =>
+        using var res = await TestRepository.SetupAsync(static async repo =>
             {
                 var sln = await repo.CreateSolutionAsync("Sample.sln", sln => sln.AddProject("Core/Core.csproj"));
                 var project = repo.CreateProject(
@@ -119,7 +130,12 @@ public sealed class BranchTests
         repo.StageAndCommitAllChanges();
 
         var executor = new ProjectDiffExecutor(new ProjectDiffExecutorOptions());
-        var result = await executor.GetProjectDiff(new FileInfo(sln), "master", "feature");
+        var result = await executor.GetProjectDiff(
+            new FileInfo(sln),
+            "master",
+            "feature",
+            TestContext.Current.CancellationToken
+        );
 
         Assert.Equal(ProjectDiffExecutionStatus.Success, result.Status);
         var diffProject = Assert.Single(result.Projects);
@@ -131,8 +147,7 @@ public sealed class BranchTests
     [Fact]
     public async Task ModifyProjectInBaseBranch_WithMergeBaseOption()
     {
-        using var res = await TestRepository.SetupAsync(
-            static async repo =>
+        using var res = await TestRepository.SetupAsync(static async repo =>
             {
                 var sln = await repo.CreateSolutionAsync("Sample.sln", sln => sln.AddProject("Core/Core.csproj"));
                 var project = repo.CreateProject(
@@ -154,7 +169,12 @@ public sealed class BranchTests
                 FindMergeBase = true
             }
         );
-        var result = await executor.GetProjectDiff(new FileInfo(sln), "master", "feature");
+        var result = await executor.GetProjectDiff(
+            new FileInfo(sln),
+            "master",
+            "feature",
+            TestContext.Current.CancellationToken
+        );
 
         Assert.Equal(ProjectDiffExecutionStatus.Success, result.Status);
         Assert.Empty(result.Projects);
