@@ -1,61 +1,37 @@
-﻿using System.CommandLine.Builder;
-using System.CommandLine.Invocation;
-using System.CommandLine.Parsing;
+﻿using System.CommandLine;
 
 namespace ProjectDiff.Tool;
 
-public class ProjectDiffTool
+public sealed class ProjectDiffTool
 {
-    private readonly Parser _parser;
-    private readonly IExtendedConsole _console;
+    private readonly CommandLineConfiguration _cli;
+    private readonly IConsole _console;
 
-    private ProjectDiffTool(Parser parser, IExtendedConsole console)
+    private ProjectDiffTool(CommandLineConfiguration cli, IConsole console)
     {
-        _parser = parser;
+        _cli = cli;
         _console = console;
     }
 
 
     public Task<int> InvokeAsync(string[] args)
     {
-        return _parser.InvokeAsync(args, _console);
+        return _cli.InvokeAsync(args);
     }
 
 
-    public static ProjectDiffTool Create(IExtendedConsole console)
+    public static ProjectDiffTool Create(IConsole console)
     {
-        var parser = BuildParser(console);
+        var parser = BuildCli(console);
         return new ProjectDiffTool(parser, console);
     }
 
-    private static Parser BuildParser(IExtendedConsole console)
+    private static CommandLineConfiguration BuildCli(IConsole console)
     {
-        return new CommandLineBuilder(new ProjectDiffCommand(console))
-            .UseVersionOption()
-            .UseHelp()
-            .UseParseDirective()
-            .UseParseErrorReporting()
-            .UseExceptionHandler(
-                (ex, ctx) =>
-                {
-                    var exitCode = ex switch
-                    {
-                        OperationCanceledException => 125,
-                        AggregateException aggregate when aggregate.InnerExceptions.All(
-                                i => i is OperationCanceledException
-                            ) =>
-                            125,
-                        _ => 1
-                    };
-                    if (exitCode == 1)
-                    {
-                        ctx.Console.Error.Write(ex.ToString());
-                    }
-
-                    ctx.ExitCode = exitCode;
-                }
-            )
-            .CancelOnProcessTermination()
-            .Build();
+        return new CommandLineConfiguration(new ProjectDiffCommand(console))
+        {
+            Error = console.Error,
+            Output = console.Out,
+        };
     }
 }
