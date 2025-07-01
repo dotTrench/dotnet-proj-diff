@@ -8,8 +8,7 @@ public sealed class MultiFrameworkTests
     [Fact]
     public static async Task FileModifiedInMultiFrameworkProjectOnlyReturnsASingleProject()
     {
-        using var res = await TestRepository.SetupAsync(
-            static async r =>
+        using var res = await TestRepository.SetupAsync(static async r =>
             {
                 var sln = await r.CreateSolutionAsync("Sample.sln", sln => sln.AddProject("Sample/Sample.csproj"));
                 r.CreateDirectory("Sample");
@@ -30,7 +29,11 @@ public sealed class MultiFrameworkTests
                 FindMergeBase = false
             }
         );
-        var result = await executor.GetProjectDiff(new FileInfo(sln), "HEAD");
+        var result = await executor.GetProjectDiff(
+            new FileInfo(sln),
+            "HEAD",
+            cancellationToken: TestContext.Current.CancellationToken
+        );
 
         Assert.Equal(ProjectDiffExecutionStatus.Success, result.Status);
         var proj = Assert.Single(result.Projects);

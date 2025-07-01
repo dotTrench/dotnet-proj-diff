@@ -112,7 +112,6 @@ public sealed class ProjectDiffCommand : RootCommand
 
     private static readonly Option<FileInfo[]> IgnoreChangedFilesOption = new("--ignore-changed-file")
     {
-
         DefaultValueFactory = _ => [],
         Description =
             "Ignore changes in specific files. If these files are a part of the build evaluation process they will still be evaluated, however these files will be considered unchanged by the diff process"
@@ -198,7 +197,7 @@ public sealed class ProjectDiffCommand : RootCommand
 
         if (result.Status != ProjectDiffExecutionStatus.Success)
         {
-            _console.Error.WriteLine(result.Status.ToString());
+            await _console.Error.WriteLineAsync(result.Status.ToString());
             return 1;
         }
 

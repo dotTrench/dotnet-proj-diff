@@ -8,8 +8,7 @@ public sealed class IgnoreChangesTests
     [Fact]
     public async Task IgnoresModifiedFiles()
     {
-        using var res = await TestRepository.SetupAsync(
-            async r =>
+        using var res = await TestRepository.SetupAsync(async r =>
             {
                 r.CreateDirectory("Core");
                 r.CreateProject("Core/Core.csproj");
@@ -34,7 +33,10 @@ public sealed class IgnoreChangesTests
                 IgnoreChangedFiles = [new FileInfo(repo.GetPath("Core/Sample.cs"))]
             }
         );
-        var diff = await executor.GetProjectDiff(new FileInfo(sln));
+        var diff = await executor.GetProjectDiff(
+            new FileInfo(sln),
+            cancellationToken: TestContext.Current.CancellationToken
+        );
         Assert.Equal(ProjectDiffExecutionStatus.Success, diff.Status);
 
         Assert.Empty(diff.Projects);
@@ -45,8 +47,7 @@ public sealed class IgnoreChangesTests
     [Fact]
     public async Task IgnoresAddedFiles()
     {
-        using var res = await TestRepository.SetupAsync(
-            async r =>
+        using var res = await TestRepository.SetupAsync(async r =>
             {
                 r.CreateDirectory("Core");
                 r.CreateProject("Core/Core.csproj");
@@ -70,7 +71,10 @@ public sealed class IgnoreChangesTests
             }
         );
 
-        var diff = await executor.GetProjectDiff(new FileInfo(sln));
+        var diff = await executor.GetProjectDiff(
+            new FileInfo(sln),
+            cancellationToken: TestContext.Current.CancellationToken
+        );
         Assert.Equal(ProjectDiffExecutionStatus.Success, diff.Status);
 
         Assert.Empty(diff.Projects);
@@ -84,8 +88,7 @@ public sealed class IgnoreChangesTests
     [Fact]
     public async Task IgnoresDeletedFiles()
     {
-        using var res = await TestRepository.SetupAsync(
-            async r =>
+        using var res = await TestRepository.SetupAsync(async r =>
             {
                 r.CreateDirectory("Core");
                 r.CreateProject("Core/Core.csproj");
@@ -107,7 +110,10 @@ public sealed class IgnoreChangesTests
                 IgnoreChangedFiles = [new FileInfo(repo.GetPath("Core/Sample.cs"))]
             }
         );
-        var diff = await executor.GetProjectDiff(new FileInfo(sln));
+        var diff = await executor.GetProjectDiff(
+            new FileInfo(sln),
+            cancellationToken: TestContext.Current.CancellationToken
+        );
         Assert.Equal(ProjectDiffExecutionStatus.Success, diff.Status);
 
         Assert.Empty(diff.Projects);

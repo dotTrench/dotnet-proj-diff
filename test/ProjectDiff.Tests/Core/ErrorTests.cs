@@ -12,7 +12,11 @@ public sealed class ErrorTests
 
         var executor = new ProjectDiffExecutor(new ProjectDiffExecutorOptions());
 
-        var result = await executor.GetProjectDiff(new FileInfo("doesnotexist.sln"), "SOME-INVALID-COMMIT-SHA");
+        var result = await executor.GetProjectDiff(
+            new FileInfo("doesnotexist.sln"),
+            "SOME-INVALID-COMMIT-SHA",
+            cancellationToken: TestContext.Current.CancellationToken
+        );
 
         Assert.Equal(ProjectDiffExecutionStatus.BaseCommitNotFound, result.Status);
     }
@@ -24,7 +28,12 @@ public sealed class ErrorTests
 
         var executor = new ProjectDiffExecutor(new ProjectDiffExecutorOptions());
 
-        var result = await executor.GetProjectDiff(new FileInfo("doesnotexist.sln"), "HEAD", "SOME-INVALID-COMMIT-SHA");
+        var result = await executor.GetProjectDiff(
+            new FileInfo("doesnotexist.sln"),
+            "HEAD",
+            "SOME-INVALID-COMMIT-SHA",
+            TestContext.Current.CancellationToken
+        );
 
         Assert.Equal(ProjectDiffExecutionStatus.HeadCommitNotFound, result.Status);
     }
