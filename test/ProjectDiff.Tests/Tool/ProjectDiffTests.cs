@@ -304,14 +304,15 @@ public sealed class ProjectDiffTests
 
     private async Task<string> ExecuteAndReadStdout(TestRepository repository, params string[] args)
     {
-        var console = new ExtendedTestConsole(repository.WorkingDirectory);
+        var console = new TestConsole(repository.WorkingDirectory);
         var tool = ProjectDiffTool.Create(console);
         var exitCode = await tool.InvokeAsync(args);
         if (exitCode != 0)
         {
-            Assert.Fail($"Program exited with exit code {exitCode}: {console.Error}");
+            var stderr = console.GetStandardError();
+            Assert.Fail($"Program exited with exit code {exitCode}: {stderr}");
         }
 
-        return console.Out.ToString() ?? "";
+        return console.GetStandardOutput();
     }
 }

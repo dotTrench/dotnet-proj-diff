@@ -1,38 +1,23 @@
-﻿using System.CommandLine;
-using System.CommandLine.IO;
+﻿namespace ProjectDiff.Tool;
 
-namespace ProjectDiff.Tool;
-
-public sealed class ExtendedConsole : IExtendedConsole
+public sealed class SystemConsole : IConsole
 {
-    private readonly SystemConsole _console;
-
-    public ExtendedConsole()
-    {
-        _console = new SystemConsole();
-        WorkingDirectory = Directory.GetCurrentDirectory();
-    }
-
-    public IStandardStreamWriter Error => _console.Error;
-
-    public bool IsErrorRedirected => _console.IsErrorRedirected;
-
-    public IStandardStreamWriter Out => _console.Out;
-
-    public bool IsOutputRedirected => _console.IsOutputRedirected;
-
-    public bool IsInputRedirected => _console.IsInputRedirected;
-
-    public string WorkingDirectory { get; }
+    public TextWriter Error { get; } = Console.Error;
+    public TextWriter Out { get; } = Console.Out;
 
     public Stream OpenStandardOutput()
     {
         return Console.OpenStandardOutput();
     }
+
+    public string WorkingDirectory { get; } = Directory.GetCurrentDirectory();
 }
 
-public interface IExtendedConsole : IConsole
+public interface IConsole
 {
+    TextWriter Error { get; }
+    TextWriter Out { get; }
+
     Stream OpenStandardOutput();
     string WorkingDirectory { get; }
 }
