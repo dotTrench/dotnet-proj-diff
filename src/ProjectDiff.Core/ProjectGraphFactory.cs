@@ -3,8 +3,8 @@ using Microsoft.Build.Definition;
 using Microsoft.Build.Evaluation;
 using Microsoft.Build.Evaluation.Context;
 using Microsoft.Build.Execution;
+using Microsoft.Build.FileSystem;
 using Microsoft.Build.Graph;
-using Microsoft.VisualStudio.SolutionPersistence.Serializer;
 
 namespace ProjectDiff.Core;
 
@@ -13,7 +13,7 @@ public static class ProjectGraphFactory
     public static async Task<ProjectGraph> BuildForGitTree(
         Repository repository,
         Tree tree,
-        FileInfo solutionFile,
+        IEntrypointProvider entrypointProvider,
         CancellationToken cancellationToken = default
     )
     {
@@ -25,21 +25,8 @@ public static class ProjectGraphFactory
             projectCollection,
             []
         );
-        if (!fs.FileExists(solutionFile.FullName))
-        {
-            throw new InvalidOperationException("Solution file does not exist.");
-        }
 
-        await using var stream = fs.GetFileStream(
-            solutionFile.FullName,
-            FileMode.Open,
-            FileAccess.Read,
-            FileShare.Read
-        );
-
-        var entrypoints = (await GetProjectEntrypoints(solutionFile, stream, cancellationToken))
-            .Select(it => new ProjectGraphEntryPoint(it))
-            .ToList();
+        var entrypoints = await entrypointProvider.GetEntrypoints(fs, cancellationToken);
 
         var graph = new ProjectGraph(
             entrypoints,
@@ -62,30 +49,25 @@ public static class ProjectGraphFactory
     }
 
     public static async Task<ProjectGraph> BuildForWorkingDirectory(
-        FileInfo solutionFile,
+        IEntrypointProvider solutionFile,
         CancellationToken cancellationToken = default
     )
     {
         using var projectCollection = new ProjectCollection();
 
-        await using var fs = solutionFile.OpenRead();
-
-        var entrypoints = (await GetProjectEntrypoints(solutionFile, fs, cancellationToken))
-            .Select(it => new ProjectGraphEntryPoint(it));
+        var fs = new DefaultFileSystem();
+        var entrypoints = await solutionFile.GetEntrypoints(fs, cancellationToken);
         var graph = new ProjectGraph(
             entrypoints,
             projectCollection,
-            (path, properties, collection) =>
-            {
-                return ProjectInstance.FromFile(
-                    path,
-                    new ProjectOptions
-                    {
-                        ProjectCollection = collection,
-                        GlobalProperties = properties,
-                    }
-                );
-            },
+            static (path, properties, collection) => ProjectInstance.FromFile(
+                path,
+                new ProjectOptions
+                {
+                    ProjectCollection = collection,
+                    GlobalProperties = properties,
+                }
+            ),
             cancellationToken
         );
 
@@ -93,36 +75,6 @@ public static class ProjectGraphFactory
     }
 
 
-    private static async Task<IEnumerable<string>> GetProjectEntrypoints(
-        FileInfo solutionFile,
-        Stream stream,
-        CancellationToken cancellationToken
-    )
-    {
-        switch (solutionFile.Extension)
-        {
-            case ".sln":
-            {
-                var solutionModel = await SolutionSerializers.SlnFileV12.OpenAsync(stream, cancellationToken);
 
-                return solutionModel.SolutionProjects
-                    .Select(
-                        it =>
-                            Path.GetFullPath(it.FilePath, solutionFile.DirectoryName!)
-                    );
-            }
-            case ".slnx":
-            {
-                var solutionModel = await SolutionSerializers.SlnXml.OpenAsync(stream, cancellationToken);
-
-                return solutionModel.SolutionProjects
-                    .Select(
-                        it =>
-                            Path.GetFullPath(it.FilePath, solutionFile.DirectoryName!)
-                    );
-            }
-            default:
-                throw new NotSupportedException($"Solution file extension {solutionFile.Extension} not supported");
-        }
-    }
+    private sealed class DefaultFileSystem : MSBuildFileSystemBase;
 }

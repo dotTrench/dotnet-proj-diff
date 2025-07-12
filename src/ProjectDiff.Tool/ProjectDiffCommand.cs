@@ -188,8 +188,11 @@ public sealed class ProjectDiffCommand : RootCommand
             }
         );
 
+        var entrypointProvider = new SolutionEntrypointProvider(settings.Solution);
+
         var result = await executor.GetProjectDiff(
-            settings.Solution,
+            settings.Solution.DirectoryName ?? _console.WorkingDirectory,
+            entrypointProvider,
             settings.BaseRef,
             settings.HeadRef,
             cancellationToken
