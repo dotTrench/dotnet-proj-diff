@@ -1,6 +1,7 @@
 ﻿using System.Collections.Frozen;
 using LibGit2Sharp;
 using Microsoft.Build.Graph;
+using ProjectDiff.Core.Entrypoints;
 
 namespace ProjectDiff.Core;
 

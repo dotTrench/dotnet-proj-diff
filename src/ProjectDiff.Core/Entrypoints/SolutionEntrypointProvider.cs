@@ -2,7 +2,7 @@
 using Microsoft.Build.Graph;
 using Microsoft.VisualStudio.SolutionPersistence.Serializer;
 
-namespace ProjectDiff.Core;
+namespace ProjectDiff.Core.Entrypoints;
 
 public sealed class SolutionEntrypointProvider : IEntrypointProvider
 {

@@ -5,6 +5,7 @@ using Microsoft.Build.Evaluation.Context;
 using Microsoft.Build.Execution;
 using Microsoft.Build.FileSystem;
 using Microsoft.Build.Graph;
+using ProjectDiff.Core.Entrypoints;
 
 namespace ProjectDiff.Core;
 

@@ -1,1 +1,1 @@
-﻿[{"path":"Sample/Sample.csproj","status":"Modified"},{"path":"Tests/Tests.csproj","status":"ReferenceChanged"}]
+﻿[{"path":"Sample/Sample.csproj","status":"Modified","referencedProjects":[]},{"path":"Tests/Tests.csproj","status":"ReferenceChanged","referencedProjects":["Sample/Sample.csproj"]}]

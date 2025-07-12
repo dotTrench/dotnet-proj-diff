@@ -1,0 +1,2 @@
+﻿Added/Added.csproj
+Sample/Sample.csproj

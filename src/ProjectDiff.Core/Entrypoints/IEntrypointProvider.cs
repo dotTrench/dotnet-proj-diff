@@ -1,7 +1,7 @@
 ﻿using Microsoft.Build.FileSystem;
 using Microsoft.Build.Graph;
 
-namespace ProjectDiff.Core;
+namespace ProjectDiff.Core.Entrypoints;
 
 public interface IEntrypointProvider
 {

@@ -38,6 +38,7 @@ internal sealed class GraphDiffInstance
                 {
                     Path = currentProject.FullPath,
                     Status = DiffStatus.Added,
+                    ReferencedProjects = currentProject.References,
                 };
             }
             else if (HasProjectChanged(previousProject, currentProject, modifiedFiles))
@@ -46,6 +47,7 @@ internal sealed class GraphDiffInstance
                 {
                     Path = currentProject.FullPath,
                     Status = DiffStatus.Modified,
+                    ReferencedProjects = currentProject.References,
                 };
             }
             else if (HasProjectReferencesChanged(previousProject, currentProject, modifiedFiles))
@@ -53,7 +55,8 @@ internal sealed class GraphDiffInstance
                 yield return new DiffProject
                 {
                     Path = currentProject.FullPath,
-                    Status = DiffStatus.ReferenceChanged
+                    Status = DiffStatus.ReferenceChanged,
+                    ReferencedProjects = currentProject.References,
                 };
             }
         }
@@ -67,6 +70,7 @@ internal sealed class GraphDiffInstance
                 {
                     Path = previousProject.FullPath,
                     Status = DiffStatus.Removed,
+                    ReferencedProjects = [],
                 };
             }
         }

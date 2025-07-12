@@ -4,7 +4,7 @@ public sealed class ProjectDiffSettings
 {
     public required string BaseRef { get; init; }
     public required string? HeadRef { get; init; }
-    public required FileInfo Solution { get; init; }
+    public required FileInfo? Solution { get; init; }
     public required bool MergeBase { get; init; } = true;
     public required bool IncludeDeleted { get; init; }
     public required bool IncludeModified { get; init; }
