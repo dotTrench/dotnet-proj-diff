@@ -1,6 +1,7 @@
 ﻿using System.Collections.Frozen;
 using LibGit2Sharp;
 using Microsoft.Build.Graph;
+using ProjectDiff.Core.Entrypoints;
 
 namespace ProjectDiff.Core;
 
@@ -20,11 +21,27 @@ public class ProjectDiffExecutor
         CancellationToken cancellationToken = default
     )
     {
-        var solutionDirectory = solutionFile.Directory ?? throw new ArgumentException(
-            "solutionFile.Directory is null",
-            nameof(solutionFile)
+        return await GetProjectDiff(
+            solutionFile.DirectoryName ?? throw new ArgumentException(
+                $"{nameof(solutionFile)}.DirectoryName is null",
+                nameof(solutionFile)
+            ),
+            new SolutionEntrypointProvider(solutionFile),
+            baseCommitRef,
+            headCommitRef,
+            cancellationToken
         );
-        var repoPath = Repository.Discover(solutionDirectory.FullName);
+    }
+
+    public async Task<ProjectDiffResult> GetProjectDiff(
+        string path,
+        IEntrypointProvider entrypointProvider,
+        string baseCommitRef = "HEAD",
+        string? headCommitRef = null,
+        CancellationToken cancellationToken = default
+    )
+    {
+        var repoPath = Repository.Discover(path);
         if (repoPath is null)
         {
             return new ProjectDiffResult
@@ -92,7 +109,7 @@ public class ProjectDiffExecutor
         var fromGraph = await ProjectGraphFactory.BuildForGitTree(
             repo,
             baseCommit.Tree,
-            solutionFile,
+            entrypointProvider,
             cancellationToken
         );
 
@@ -100,7 +117,7 @@ public class ProjectDiffExecutor
         if (headCommit is null)
         {
             toGraph = await ProjectGraphFactory.BuildForWorkingDirectory(
-                solutionFile,
+                entrypointProvider,
                 cancellationToken
             );
         }
@@ -109,7 +126,7 @@ public class ProjectDiffExecutor
             toGraph = await ProjectGraphFactory.BuildForGitTree(
                 repo,
                 headCommit.Tree,
-                solutionFile,
+                entrypointProvider,
                 cancellationToken
             );
         }

@@ -7,6 +7,9 @@ public sealed class ProjectDiffTests
 {
     public static TheoryData<OutputFormat> OutputFormats => new(Enum.GetValues<OutputFormat>());
 
+    public static TheoryData<OutputFormat> DirectoryScanOutputFormats => new(
+        OutputFormats.Where(it => it.Data != OutputFormat.Slnf)
+    );
 
     private static string GetExtension(OutputFormat format) => format switch
     {
@@ -21,8 +24,7 @@ public sealed class ProjectDiffTests
     [MemberData(nameof(OutputFormats))]
     public async Task DetectsAddedFiles(OutputFormat format)
     {
-        using var res = await TestRepository.SetupAsync(
-            static async r =>
+        using var res = await TestRepository.SetupAsync(static async r =>
             {
                 var solution = await r.CreateSolutionAsync(
                     "Sample.sln",
@@ -51,8 +53,7 @@ public sealed class ProjectDiffTests
     [MemberData(nameof(OutputFormats))]
     public async Task DetectsDeletedFiles(OutputFormat format)
     {
-        using var res = await TestRepository.SetupAsync(
-            static async r =>
+        using var res = await TestRepository.SetupAsync(static async r =>
             {
                 var sln = await r.CreateSolutionAsync("Sample.sln", sln => sln.AddProject("Sample/Sample.csproj"));
                 r.CreateDirectory("Sample");
@@ -77,8 +78,7 @@ public sealed class ProjectDiffTests
     [MemberData(nameof(OutputFormats))]
     public async Task DetectsModifiedFiles(OutputFormat format)
     {
-        using var res = await TestRepository.SetupAsync(
-            static async r =>
+        using var res = await TestRepository.SetupAsync(static async r =>
             {
                 var sln = await r.CreateSolutionAsync("Sample.sln", sln => sln.AddProject("Sample/Sample.csproj"));
                 r.CreateDirectory("Sample");
@@ -101,8 +101,7 @@ public sealed class ProjectDiffTests
     [MemberData(nameof(OutputFormats))]
     public async Task DetectsChangesInReferencedProjects(OutputFormat format)
     {
-        using var res = await TestRepository.SetupAsync(
-            static async r =>
+        using var res = await TestRepository.SetupAsync(static async r =>
             {
                 var sln = await r.CreateSolutionAsync(
                     "Sample.sln",
@@ -140,8 +139,7 @@ public sealed class ProjectDiffTests
     [MemberData(nameof(OutputFormats))]
     public async Task DetectsChangesInNestedReferencedProjects(OutputFormat format)
     {
-        using var res = await TestRepository.SetupAsync(
-            static async r =>
+        using var res = await TestRepository.SetupAsync(static async r =>
             {
                 var sln = await r.CreateSolutionAsync(
                     "Sample.sln",
@@ -184,8 +182,7 @@ public sealed class ProjectDiffTests
     [MemberData(nameof(OutputFormats))]
     public async Task DetectsDeletedProjectsWhenOptionIsSet(OutputFormat format)
     {
-        using var res = await TestRepository.SetupAsync(
-            static async r =>
+        using var res = await TestRepository.SetupAsync(static async r =>
             {
                 r.CreateDirectory("Sample");
                 r.CreateDirectory("Tests");
@@ -229,8 +226,7 @@ public sealed class ProjectDiffTests
     [MemberData(nameof(OutputFormats))]
     public async Task DoesNotDetectDeletedProjectsWhenOptionIsNotSet(OutputFormat format)
     {
-        using var res = await TestRepository.SetupAsync(
-            static async r =>
+        using var res = await TestRepository.SetupAsync(static async r =>
             {
                 r.CreateDirectory("Sample");
                 r.CreateDirectory("Tests");
@@ -273,8 +269,7 @@ public sealed class ProjectDiffTests
     [MemberData(nameof(OutputFormats))]
     public async Task DetectsAddedProjects(OutputFormat format)
     {
-        using var res = await TestRepository.SetupAsync(
-            static async r =>
+        using var res = await TestRepository.SetupAsync(static async r =>
             {
                 var sln = await r.CreateSolutionAsync("Sample.sln", sln => sln.AddProject("Sample/Sample.csproj"));
                 r.CreateDirectory("Sample");
@@ -301,8 +296,33 @@ public sealed class ProjectDiffTests
             .UseParameters(format);
     }
 
+    [Theory]
+    [MemberData(nameof(DirectoryScanOutputFormats))]
+    public async Task DetectsAddedProjectsWithDirectoryScan(OutputFormat format)
+    {
+        using var repo = await TestRepository.SetupAsync(static async r =>
+            {
+                r.CreateDirectory("Sample");
+                r.CreateProject("Sample/Sample.csproj");
+                await r.WriteFileAsync("Sample/MyClass.cs", "// Some content");
+            }
+        );
 
-    private async Task<string> ExecuteAndReadStdout(TestRepository repository, params string[] args)
+        repo.CreateDirectory("Added");
+        repo.CreateProject("Added/Added.csproj");
+
+
+        var output = await ExecuteAndReadStdout(repo, $"--format={format}");
+
+        await Verify(output, GetExtension(format))
+            .UseParameters(format);
+    }
+
+
+    private static async Task<string> ExecuteAndReadStdout(
+        TestRepository repository,
+        params string[] args
+    )
     {
         var console = new TestConsole(repository.WorkingDirectory);
         var tool = ProjectDiffTool.Create(console);

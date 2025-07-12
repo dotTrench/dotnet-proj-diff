@@ -8,7 +8,7 @@ using Microsoft.Build.FileSystem;
 
 namespace ProjectDiff.Core;
 
-public sealed class GitTreeFileSystem : MSBuildFileSystemBase
+internal sealed class GitTreeFileSystem : MSBuildFileSystemBase
 {
     private readonly DirectoryInfo _directory;
     private readonly Tree _tree;
@@ -81,13 +81,19 @@ public sealed class GitTreeFileSystem : MSBuildFileSystemBase
             return base.EnumerateFiles(path, searchPattern, searchOption);
         }
 
-        if (searchOption != SearchOption.TopDirectoryOnly)
+
+        var entries = EnumerateTreeFileSystemEntries(path, searchPattern, TreeEntryTargetType.Blob);
+
+        if (searchOption == SearchOption.TopDirectoryOnly)
         {
-            throw new NotSupportedException("EnumerateDirectories");
+            return entries;
         }
 
 
-        return EnumerateTreeFileSystemEntries(path, searchPattern, TreeEntryTargetType.Blob);
+        return entries.Concat(
+            EnumerateDirectories(path)
+                .SelectMany(dir => EnumerateFiles(dir, searchPattern, searchOption))
+        );
     }
 
     public override IEnumerable<string> EnumerateDirectories(

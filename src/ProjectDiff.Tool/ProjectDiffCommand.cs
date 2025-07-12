@@ -5,6 +5,7 @@ using System.Text.Json.Serialization;
 using Microsoft.Build.Construction;
 using Microsoft.Build.Evaluation;
 using ProjectDiff.Core;
+using ProjectDiff.Core.Entrypoints;
 
 namespace ProjectDiff.Tool;
 
@@ -21,7 +22,7 @@ public sealed class ProjectDiffCommand : RootCommand
 
     private static readonly Argument<FileInfo> SolutionArgument = new("solution")
     {
-        Arity = ArgumentArity.ExactlyOne,
+        Arity = ArgumentArity.ZeroOrOne,
         Description = "Path to solution file to derive projects from",
         Validators =
         {
@@ -145,7 +146,7 @@ public sealed class ProjectDiffCommand : RootCommand
         {
             Format = parseResult.GetValue(Format),
             Output = parseResult.GetValue(OutputOption),
-            Solution = parseResult.GetRequiredValue(SolutionArgument),
+            Solution = parseResult.GetValue(SolutionArgument),
             BaseRef = parseResult.GetRequiredValue(BaseCommitOption),
             HeadRef = parseResult.GetValue(HeadCommitOption),
             MergeBase = parseResult.GetValue(MergeBaseOption),
@@ -188,8 +189,13 @@ public sealed class ProjectDiffCommand : RootCommand
             }
         );
 
+        IEntrypointProvider entrypointProvider = settings.Solution is not null
+            ? new SolutionEntrypointProvider(settings.Solution)
+            : new DirectoryScanEntrypointProvider(_console.WorkingDirectory);
+
         var result = await executor.GetProjectDiff(
-            settings.Solution,
+            settings.Solution?.DirectoryName ?? _console.WorkingDirectory,
+            entrypointProvider,
             settings.BaseRef,
             settings.HeadRef,
             cancellationToken
@@ -201,7 +207,9 @@ public sealed class ProjectDiffCommand : RootCommand
             return 1;
         }
 
-        var diff = result.Projects.Where(ShouldInclude);
+        var diff = result.Projects.Where(ShouldInclude)
+            .OrderBy(it => it.ReferencedProjects.Count)
+            .ThenBy(it => it.Path);
         switch (outputFormat)
         {
             case OutputFormat.Plain:
@@ -211,6 +219,12 @@ public sealed class ProjectDiffCommand : RootCommand
                 await WriteJson(diffOutput, diff, settings.AbsolutePaths);
                 break;
             case OutputFormat.Slnf:
+                if (settings.Solution is null)
+                {
+                    WriteError(_console, "Cannot output slnf format without solution file specified.");
+                    return 1;
+                }
+
                 await WriteSlnf(diffOutput, settings.Solution, diff);
                 break;
             case OutputFormat.Traversal:
@@ -265,7 +279,13 @@ public sealed class ProjectDiffCommand : RootCommand
                     output.RootDirectory,
                     project.Path,
                     absolutePaths
-                )
+                ),
+                ReferencedProjects = project.ReferencedProjects
+                    .Select(refProject => NormalizePath(
+                        output.RootDirectory,
+                        refProject,
+                        absolutePaths
+                    )).ToList()
             }
         );
 
