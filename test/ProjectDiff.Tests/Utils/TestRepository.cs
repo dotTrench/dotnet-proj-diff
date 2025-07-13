@@ -50,6 +50,8 @@ public sealed class TestRepository : IDisposable
     public Identity Identity { get; set; } = DefaultIdentity;
     public string WorkingDirectory => _repository.Info.WorkingDirectory;
 
+    public Tree HeadTree => _repository.Head.Tip.Tree;
+
     public void DeleteDirectory(string path, bool recursive = false)
     {
         Directory.Delete(GetPath(path), recursive);

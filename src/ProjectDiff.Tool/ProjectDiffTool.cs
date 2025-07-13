@@ -5,12 +5,10 @@ namespace ProjectDiff.Tool;
 public sealed class ProjectDiffTool
 {
     private readonly CommandLineConfiguration _cli;
-    private readonly IConsole _console;
 
-    private ProjectDiffTool(CommandLineConfiguration cli, IConsole console)
+    private ProjectDiffTool(CommandLineConfiguration cli)
     {
         _cli = cli;
-        _console = console;
     }
 
 
@@ -23,7 +21,7 @@ public sealed class ProjectDiffTool
     public static ProjectDiffTool Create(IConsole console)
     {
         var parser = BuildCli(console);
-        return new ProjectDiffTool(parser, console);
+        return new ProjectDiffTool(parser);
     }
 
     private static CommandLineConfiguration BuildCli(IConsole console)
