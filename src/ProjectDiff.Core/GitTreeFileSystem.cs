@@ -8,29 +8,37 @@ using Microsoft.Build.FileSystem;
 
 namespace ProjectDiff.Core;
 
-internal sealed class GitTreeFileSystem : MSBuildFileSystemBase
+public sealed class GitTreeFileSystem : MSBuildFileSystemBase
 {
-    private readonly DirectoryInfo _directory;
+    private readonly Repository _repository;
     private readonly Tree _tree;
     private readonly ProjectCollection _projectCollection;
     private readonly Dictionary<string, string> _globalProperties;
 
     public GitTreeFileSystem(
-        DirectoryInfo directory,
+        Repository repository,
         Tree tree,
         ProjectCollection projectCollection,
         Dictionary<string, string> globalProperties
     )
     {
-        _directory = directory;
+        _repository = repository;
         _tree = tree;
         _projectCollection = projectCollection;
         _globalProperties = globalProperties;
     }
 
+    public bool LazyLoadProjects { get; set; } = true;
+
     public override TextReader ReadFile(string path)
     {
-        throw new NotSupportedException("ReadFile");
+        if (!ShouldUseTree(path))
+        {
+            return base.ReadFile(path);
+        }
+
+        using var stream = GetFileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+        return new StreamReader(stream);
     }
 
     public override Stream GetFileStream(string path, FileMode mode, FileAccess access, FileShare share)
@@ -62,12 +70,27 @@ internal sealed class GitTreeFileSystem : MSBuildFileSystemBase
 
     public override string ReadFileAllText(string path)
     {
-        throw new NotSupportedException("ReadFileAllText");
+        if (!ShouldUseTree(path))
+        {
+            return base.ReadFileAllText(path);
+        }
+
+        using var stream = GetFileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+        using var reader = new StreamReader(stream);
+        return reader.ReadToEnd();
     }
 
     public override byte[] ReadFileAllBytes(string path)
     {
-        throw new NotSupportedException("ReadFileAllBytes");
+        if (!ShouldUseTree(path))
+        {
+            return base.ReadFileAllBytes(path);
+        }
+
+        using var stream = GetFileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+        using var memoryStream = new MemoryStream();
+        stream.CopyTo(memoryStream);
+        return memoryStream.ToArray();
     }
 
     public override IEnumerable<string> EnumerateFiles(
@@ -81,20 +104,9 @@ internal sealed class GitTreeFileSystem : MSBuildFileSystemBase
             return base.EnumerateFiles(path, searchPattern, searchOption);
         }
 
-
-        var entries = EnumerateTreeFileSystemEntries(path, searchPattern, TreeEntryTargetType.Blob);
-
-        if (searchOption == SearchOption.TopDirectoryOnly)
-        {
-            return entries;
-        }
-
-
-        return entries.Concat(
-            EnumerateDirectories(path)
-                .SelectMany(dir => EnumerateFiles(dir, searchPattern, searchOption))
-        );
+        return EnumerateTree(path, searchPattern, searchOption, TreeEntryTargetType.Blob);
     }
+
 
     public override IEnumerable<string> EnumerateDirectories(
         string path,
@@ -107,13 +119,7 @@ internal sealed class GitTreeFileSystem : MSBuildFileSystemBase
             return base.EnumerateDirectories(path, searchPattern, searchOption);
         }
 
-        if (searchOption != SearchOption.TopDirectoryOnly)
-        {
-            throw new NotSupportedException("EnumerateDirectories");
-        }
-
-
-        return EnumerateTreeFileSystemEntries(path, searchPattern, TreeEntryTargetType.Tree);
+        return EnumerateTree(path, searchPattern, searchOption, TreeEntryTargetType.Tree);
     }
 
 
@@ -128,52 +134,7 @@ internal sealed class GitTreeFileSystem : MSBuildFileSystemBase
             return base.EnumerateFileSystemEntries(path, searchPattern, searchOption);
         }
 
-        if (searchOption != SearchOption.TopDirectoryOnly)
-        {
-            throw new NotSupportedException("EnumerateFileSystemEntries");
-        }
-
-        return EnumerateTreeFileSystemEntries(path, searchPattern, null);
-    }
-
-    private IEnumerable<string> EnumerateTreeFileSystemEntries(
-        string path,
-        string searchPattern,
-        TreeEntryTargetType? targetType
-    )
-    {
-        var p = RelativePath(path);
-
-        var entry = _tree[p];
-        if (entry == null)
-        {
-            yield break;
-        }
-
-        if (entry.TargetType != TreeEntryTargetType.Tree)
-        {
-            yield break;
-        }
-
-        var treeEntry = (Tree)entry.Target;
-
-        foreach (var e in treeEntry)
-        {
-            if (targetType.HasValue && e.TargetType != targetType)
-            {
-                continue;
-            }
-
-            if (!FileSystemName.MatchesWin32Expression(searchPattern, e.Name))
-            {
-                continue;
-            }
-
-
-            var fullPath = Path.GetFullPath(e.Path, _directory.FullName);
-
-            yield return fullPath;
-        }
+        return EnumerateTree(path, searchPattern, searchOption, null);
     }
 
     public override FileAttributes GetAttributes(string path)
@@ -214,18 +175,16 @@ internal sealed class GitTreeFileSystem : MSBuildFileSystemBase
             return false;
         }
 
-        if (!IsProject(entry))
+        if (LazyLoadProjects && IsProject(entry))
         {
-            return true;
-        }
-
-        // HACK: Since Imports doesn't use the file system we have to manually load the projects
-        // whenever msbuild tries to load them.
-        lock (_projectLoadLock)
-        {
-            if (_projectCollection.GetLoadedProjects(path).Count == 0)
+            // HACK: Since Imports doesn't use the file system we have to manually load the projects
+            // whenever msbuild tries to load them.
+            lock (_projectLoadLock)
             {
-                LoadProject(path, _globalProperties, _projectCollection);
+                if (_projectCollection.GetLoadedProjects(path).Count == 0)
+                {
+                    LoadProject(path, _globalProperties, _projectCollection);
+                }
             }
         }
 
@@ -254,11 +213,11 @@ internal sealed class GitTreeFileSystem : MSBuildFileSystemBase
     }
 
     private string RelativePath(string path) =>
-        Path.GetRelativePath(_directory.FullName, path)
+        Path.GetRelativePath(_repository.Info.WorkingDirectory, path)
             .Replace('\\', '/');
 
     private bool ShouldUseTree(string path) =>
-        path.StartsWith(_directory.FullName);
+        path.StartsWith(_repository.Info.WorkingDirectory);
 
     public Project LoadProject(
         string path,
@@ -277,7 +236,7 @@ internal sealed class GitTreeFileSystem : MSBuildFileSystemBase
 
         if (entry is null || entry.TargetType != TreeEntryTargetType.Blob)
         {
-            throw new NotImplementedException();
+            throw new InvalidOperationException("Tried loading a project that is not a blob");
         }
 
         var blob = (Blob)entry.Target;
@@ -295,5 +254,73 @@ internal sealed class GitTreeFileSystem : MSBuildFileSystemBase
                 LoadSettings = ProjectLoadSettings.Default | ProjectLoadSettings.RecordDuplicateButNotCircularImports
             }
         );
+    }
+
+
+    private IEnumerable<string> EnumerateTree(
+        string path,
+        string searchPattern,
+        SearchOption searchOption,
+        TreeEntryTargetType? targetType
+    )
+    {
+        var (tree, treePath) = FindTree(path);
+        if (searchOption == SearchOption.TopDirectoryOnly)
+        {
+            return tree
+                .Where(ShouldInclude)
+                .Select(it => Path.GetFullPath(Path.Combine(treePath, it.Path)));
+        }
+
+        return ExpandTree(tree, treePath)
+            .Where(e => ShouldInclude(e.Entry))
+            .Select(it => it.Path);
+
+        bool ShouldInclude(TreeEntry entry)
+        {
+            if (targetType.HasValue && entry.TargetType != targetType)
+            {
+                return false;
+            }
+
+            return FileSystemName.MatchesWin32Expression(searchPattern, entry.Name);
+        }
+    }
+
+    private static IEnumerable<(string Path, TreeEntry Entry)> ExpandTree(Tree tree, string parentPath)
+    {
+        foreach (var entry in tree)
+        {
+            var fullPath = Path.Combine(parentPath, entry.Path);
+
+            yield return (fullPath, entry);
+
+            if (entry.TargetType == TreeEntryTargetType.Tree)
+            {
+                var subTree = entry.Target.Peel<Tree>();
+                foreach (var subEntry in ExpandTree(subTree, fullPath))
+                {
+                    yield return subEntry;
+                }
+            }
+        }
+    }
+
+    private (Tree Tree, string Path) FindTree(string path)
+    {
+        var relativePath = RelativePath(path);
+        if (relativePath == ".")
+        {
+            return (_tree, _repository.Info.WorkingDirectory);
+        }
+
+        var entry = _tree[relativePath];
+        if (entry == null || entry.TargetType != TreeEntryTargetType.Tree)
+        {
+            throw new InvalidOperationException("Tried to enumerate files in a path that is not a tree");
+        }
+
+        return (entry.Target.Peel<Tree>(),
+            Path.GetFullPath(Path.Combine(_repository.Info.WorkingDirectory, relativePath)));
     }
 }

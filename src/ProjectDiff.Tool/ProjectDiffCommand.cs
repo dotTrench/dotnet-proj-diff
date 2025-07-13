@@ -203,7 +203,7 @@ public sealed class ProjectDiffCommand : RootCommand
 
         if (result.Status != ProjectDiffExecutionStatus.Success)
         {
-            await _console.Error.WriteLineAsync(result.Status.ToString());
+            WriteError(_console, $"Failed to calculate project diff: {result.Status}");
             return 1;
         }
 
@@ -282,10 +282,11 @@ public sealed class ProjectDiffCommand : RootCommand
                 ),
                 ReferencedProjects = project.ReferencedProjects
                     .Select(refProject => NormalizePath(
-                        output.RootDirectory,
-                        refProject,
-                        absolutePaths
-                    )).ToList()
+                            output.RootDirectory,
+                            refProject,
+                            absolutePaths
+                        )
+                    ).ToList()
             }
         );
 

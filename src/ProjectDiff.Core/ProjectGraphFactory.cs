@@ -21,13 +21,15 @@ public static class ProjectGraphFactory
         using var projectCollection = new ProjectCollection();
 
         var fs = new GitTreeFileSystem(
-            new DirectoryInfo(repository.Info.WorkingDirectory),
+            repository,
             tree,
             projectCollection,
             []
         );
 
+        fs.LazyLoadProjects = false;
         var entrypoints = await entrypointProvider.GetEntrypoints(fs, cancellationToken);
+        fs.LazyLoadProjects = true;
 
         var graph = new ProjectGraph(
             entrypoints,
@@ -57,7 +59,7 @@ public static class ProjectGraphFactory
         using var projectCollection = new ProjectCollection();
 
         var fs = new DefaultFileSystem();
-        var entrypoints = await solutionFile.GetEntrypoints(fs, cancellationToken);
+        var entrypoints = (await solutionFile.GetEntrypoints(fs, cancellationToken)).ToList();
         var graph = new ProjectGraph(
             entrypoints,
             projectCollection,
@@ -74,7 +76,6 @@ public static class ProjectGraphFactory
 
         return graph;
     }
-
 
 
     private sealed class DefaultFileSystem : MSBuildFileSystemBase;
