@@ -168,7 +168,7 @@ public sealed class DirectoryBuildPropsTests
     }
 
     [Fact]
-    public async Task ModififyingDirectoryBuildProps_ShouldAffectProjects()
+    public async Task ModifyingDirectoryBuildProps_ShouldAffectProjects()
     {
         using var repo = await TestRepository.SetupAsync(async r =>
             {
