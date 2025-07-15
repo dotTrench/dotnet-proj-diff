@@ -1,4 +1,6 @@
-﻿using ProjectDiff.Core;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using ProjectDiff.Core;
+using ProjectDiff.Core.Entrypoints;
 using ProjectDiff.Tests.Utils;
 
 namespace ProjectDiff.Tests.Core;
@@ -20,13 +22,14 @@ public sealed class BranchTests
             "Sample/Sample.csproj",
             p => { p.AddProperty("TargetFrameworks", "net8.0;netstandard2.0"); }
         );
-        await repo.WriteFileAsync("Sample/MyClass.cs", "// Some content");
+        await repo.WriteAllTextAsync("Sample/MyClass.cs", "// Some content");
         repo.StageAndCommitAllChanges();
 
-        var executor = new ProjectDiffExecutor(new ProjectDiffExecutorOptions());
+        var executor = new ProjectDiffExecutor(new ProjectDiffExecutorOptions(), NullLoggerFactory.Instance);
 
         var result = await executor.GetProjectDiff(
-            new FileInfo(sln),
+            repo.WorkingDirectory,
+            new SolutionEntrypointProvider(new FileInfo(sln), NullLogger<SolutionEntrypointProvider>.Instance),
             "master",
             "feature",
             TestContext.Current.CancellationToken
@@ -49,7 +52,7 @@ public sealed class BranchTests
                     "Sample/Sample.csproj",
                     p => { p.AddProperty("TargetFrameworks", "net8.0;netstandard2.0"); }
                 );
-                await repo.WriteFileAsync("Sample/MyClass.cs", "// Some content");
+                await repo.WriteAllTextAsync("Sample/MyClass.cs", "// Some content");
                 return (sln, project);
             }
         );
@@ -64,7 +67,8 @@ public sealed class BranchTests
 
         var executor = new ProjectDiffExecutor(new ProjectDiffExecutorOptions());
         var result = await executor.GetProjectDiff(
-            new FileInfo(sln),
+            repo.WorkingDirectory,
+            new SolutionEntrypointProvider(new FileInfo(sln), NullLogger<SolutionEntrypointProvider>.Instance),
             "master",
             "feature",
             TestContext.Current.CancellationToken
@@ -82,23 +86,26 @@ public sealed class BranchTests
     {
         using var res = await TestRepository.SetupAsync(static async repo =>
             {
-                var sln = await repo.CreateSolutionAsync("Sample.sln", sln => sln.AddProject("Sample/Sample.csproj"));
                 var project = repo.CreateProject(
                     "Sample/Sample.csproj",
                     p => { p.AddProperty("TargetFrameworks", "net8.0;netstandard2.0"); }
                 );
-                await repo.WriteFileAsync("Sample/MyClass.cs", "// Some content");
-                return (sln, project);
+                await repo.WriteAllTextAsync("Sample/MyClass.cs", "// Some content");
+                return project;
             }
         );
-        var ((sln, project), repo) = res;
+        var (project, repo) = res;
 
         repo.CreateAndCheckoutBranch("feature");
-        await repo.WriteFileAsync("Sample/MyClass.cs", "// Some new content");
+        await repo.WriteAllTextAsync("Sample/MyClass.cs", "// Some new content");
         repo.StageAndCommitAllChanges();
         var executor = new ProjectDiffExecutor(new ProjectDiffExecutorOptions());
         var result = await executor.GetProjectDiff(
-            new FileInfo(sln),
+            repo.WorkingDirectory,
+            new DirectoryScanEntrypointProvider(
+                repo.WorkingDirectory,
+                NullLogger<DirectoryScanEntrypointProvider>.Instance
+            ),
             "master",
             "feature",
             TestContext.Current.CancellationToken
@@ -113,25 +120,28 @@ public sealed class BranchTests
     [Fact]
     public async Task ModifyProjectInBaseBranch_WithNoMergeBaseOption()
     {
-        using var res = await TestRepository.SetupAsync(static async repo =>
+        using var res = await TestRepository.SetupAsync(static repo =>
             {
-                var sln = await repo.CreateSolutionAsync("Sample.sln", sln => sln.AddProject("Core/Core.csproj"));
                 var project = repo.CreateProject(
                     "Core/Core.csproj",
                     p => { p.AddProperty("TargetFrameworks", "net8.0;netstandard2.0"); }
                 );
-                return (sln, project);
+                return Task.FromResult(project);
             }
         );
-        var ((sln, project), repo) = res;
+        var (project, repo) = res;
         repo.CreateBranch("feature"); // Create the branch without checking it out
 
-        await repo.WriteFileAsync("Core/MyClass.cs", "// Some content");
+        await repo.WriteAllTextAsync("Core/MyClass.cs", "// Some content");
         repo.StageAndCommitAllChanges();
 
         var executor = new ProjectDiffExecutor(new ProjectDiffExecutorOptions());
         var result = await executor.GetProjectDiff(
-            new FileInfo(sln),
+            repo.WorkingDirectory,
+            new DirectoryScanEntrypointProvider(
+                repo.WorkingDirectory,
+                NullLogger<DirectoryScanEntrypointProvider>.Instance
+            ),
             "master",
             "feature",
             TestContext.Current.CancellationToken
@@ -147,20 +157,18 @@ public sealed class BranchTests
     [Fact]
     public async Task ModifyProjectInBaseBranch_WithMergeBaseOption()
     {
-        using var res = await TestRepository.SetupAsync(static async repo =>
+        using var repo = await TestRepository.SetupAsync(static repo =>
             {
-                var sln = await repo.CreateSolutionAsync("Sample.sln", sln => sln.AddProject("Core/Core.csproj"));
-                var project = repo.CreateProject(
+                repo.CreateProject(
                     "Core/Core.csproj",
                     p => { p.AddProperty("TargetFrameworks", "net8.0;netstandard2.0"); }
                 );
-                return (sln, project);
+                return Task.CompletedTask;
             }
         );
-        var ((sln, project), repo) = res;
         repo.CreateBranch("feature"); // Create the branch without checking it out
 
-        await repo.WriteFileAsync("Core/MyClass.cs", "// Some content");
+        await repo.WriteAllTextAsync("Core/MyClass.cs", "// Some content");
         repo.StageAndCommitAllChanges();
 
         var executor = new ProjectDiffExecutor(
@@ -170,7 +178,11 @@ public sealed class BranchTests
             }
         );
         var result = await executor.GetProjectDiff(
-            new FileInfo(sln),
+            repo.WorkingDirectory,
+            new DirectoryScanEntrypointProvider(
+                repo.WorkingDirectory,
+                NullLogger<DirectoryScanEntrypointProvider>.Instance
+            ),
             "master",
             "feature",
             TestContext.Current.CancellationToken

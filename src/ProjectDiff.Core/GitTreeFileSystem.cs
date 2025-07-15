@@ -5,6 +5,7 @@ using Microsoft.Build.Construction;
 using Microsoft.Build.Definition;
 using Microsoft.Build.Evaluation;
 using Microsoft.Build.FileSystem;
+using Microsoft.Extensions.Logging;
 
 namespace ProjectDiff.Core;
 
@@ -14,21 +15,24 @@ public sealed class GitTreeFileSystem : MSBuildFileSystemBase
     private readonly Tree _tree;
     private readonly ProjectCollection _projectCollection;
     private readonly Dictionary<string, string> _globalProperties;
+    private readonly ILogger<GitTreeFileSystem> _logger;
 
     public GitTreeFileSystem(
         Repository repository,
         Tree tree,
         ProjectCollection projectCollection,
-        Dictionary<string, string> globalProperties
+        Dictionary<string, string> globalProperties,
+        ILogger<GitTreeFileSystem> logger
     )
     {
         _repository = repository;
         _tree = tree;
         _projectCollection = projectCollection;
         _globalProperties = globalProperties;
+        _logger = logger;
     }
 
-    public bool LazyLoadProjects { get; set; } = true;
+    public bool EagerLoadProjects { get; set; }
 
     public override TextReader ReadFile(string path)
     {
@@ -37,7 +41,7 @@ public sealed class GitTreeFileSystem : MSBuildFileSystemBase
             return base.ReadFile(path);
         }
 
-        using var stream = GetFileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+        var stream = GetFileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
         return new StreamReader(stream);
     }
 
@@ -50,12 +54,12 @@ public sealed class GitTreeFileSystem : MSBuildFileSystemBase
 
         if (mode != FileMode.Open)
         {
-            throw new ArgumentException("Only reading files is supported", nameof(mode));
+            throw new NotSupportedException("Mode must be FileMode.Open");
         }
 
         if (access != FileAccess.Read)
         {
-            throw new ArgumentException("Only reading files is supported", nameof(access));
+            throw new NotSupportedException("Access mode must be FileAccess.Read");
         }
 
         var relativePath = RelativePath(path);
@@ -152,7 +156,8 @@ public sealed class GitTreeFileSystem : MSBuildFileSystemBase
         if (!ShouldUseTree(path))
             return base.DirectoryExists(path);
 
-        var entry = _tree[RelativePath(path)];
+        var relativePath = RelativePath(path);
+        var entry = _tree[relativePath];
 
         return entry is { TargetType: TreeEntryTargetType.Tree };
     }
@@ -175,7 +180,7 @@ public sealed class GitTreeFileSystem : MSBuildFileSystemBase
             return false;
         }
 
-        if (LazyLoadProjects && IsProject(entry))
+        if (EagerLoadProjects && IsProject(entry))
         {
             // HACK: Since Imports doesn't use the file system we have to manually load the projects
             // whenever msbuild tries to load them.
@@ -183,6 +188,7 @@ public sealed class GitTreeFileSystem : MSBuildFileSystemBase
             {
                 if (_projectCollection.GetLoadedProjects(path).Count == 0)
                 {
+                    _logger.LogDebug("Eagerly loading project from path '{Path}'", path);
                     LoadProject(path, _globalProperties, _projectCollection);
                 }
             }
@@ -230,6 +236,7 @@ public sealed class GitTreeFileSystem : MSBuildFileSystemBase
             throw new NotImplementedException();
         }
 
+        _logger.LogInformation("Loading project from path '{Path}'", path);
         var relativePath = RelativePath(path);
 
         var entry = _tree[relativePath];
@@ -239,13 +246,13 @@ public sealed class GitTreeFileSystem : MSBuildFileSystemBase
             throw new InvalidOperationException("Tried loading a project that is not a blob");
         }
 
-        var blob = (Blob)entry.Target;
+        var blob = entry.Target.Peel<Blob>();
 
         using var xml = new XmlTextReader(new StringReader(blob.GetContentText()));
         var projectRootElement = ProjectRootElement.Create(xml, projects);
         projectRootElement.FullPath = path;
 
-        return Project.FromProjectRootElement(
+        var project = Project.FromProjectRootElement(
             projectRootElement,
             new ProjectOptions
             {
@@ -254,6 +261,9 @@ public sealed class GitTreeFileSystem : MSBuildFileSystemBase
                 LoadSettings = ProjectLoadSettings.Default | ProjectLoadSettings.RecordDuplicateButNotCircularImports
             }
         );
+
+        _logger.LogDebug("Loaded project '{ProjectName}' from git tree '{Tree}'", project.FullPath, _tree.Sha);
+        return project;
     }
 
 

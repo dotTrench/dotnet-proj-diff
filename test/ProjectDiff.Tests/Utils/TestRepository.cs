@@ -57,15 +57,7 @@ public sealed class TestRepository : IDisposable
         Directory.Delete(GetPath(path), recursive);
     }
 
-    public void WriteAllText(string file, string content)
-    {
-        File.WriteAllText(
-            GetPath(file),
-            content
-        );
-    }
-
-    public Task WriteFileAsync(string file, string content)
+    public Task WriteAllTextAsync(string file, string content)
     {
         return File.WriteAllTextAsync(GetPath(file), content);
     }

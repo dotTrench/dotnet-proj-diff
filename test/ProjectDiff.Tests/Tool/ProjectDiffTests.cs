@@ -32,7 +32,7 @@ public sealed class ProjectDiffTests
                 );
 
                 r.CreateDirectory("Sample");
-                await r.WriteFileAsync("Sample/MyClass.cs", "// Some content");
+                await r.WriteAllTextAsync("Sample/MyClass.cs", "// Some content");
                 r.CreateProject("Sample/Sample.csproj");
 
                 return solution;
@@ -40,7 +40,7 @@ public sealed class ProjectDiffTests
         );
         var (sln, repo) = res;
 
-        await repo.WriteFileAsync("Sample/MyClass2", "// Some other content");
+        await repo.WriteAllTextAsync("Sample/MyClass2", "// Some other content");
 
         var output = await ExecuteAndReadStdout(repo, sln, $"--format={format}");
 
@@ -59,7 +59,7 @@ public sealed class ProjectDiffTests
                 r.CreateDirectory("Sample");
                 r.CreateProject("Sample/Sample.csproj");
 
-                await r.WriteFileAsync("Sample/MyClass.cs", "// Some content");
+                await r.WriteAllTextAsync("Sample/MyClass.cs", "// Some content");
 
                 return sln;
             }
@@ -83,13 +83,13 @@ public sealed class ProjectDiffTests
                 var sln = await r.CreateSolutionAsync("Sample.sln", sln => sln.AddProject("Sample/Sample.csproj"));
                 r.CreateDirectory("Sample");
                 r.CreateProject("Sample/Sample.csproj");
-                await r.WriteFileAsync("Sample/MyClass.cs", "// Some content");
+                await r.WriteAllTextAsync("Sample/MyClass.cs", "// Some content");
 
                 return sln;
             }
         );
         var (sln, repo) = res;
-        await repo.WriteFileAsync("Sample/MyClass.cs", "// Some new content");
+        await repo.WriteAllTextAsync("Sample/MyClass.cs", "// Some new content");
 
         var output = await ExecuteAndReadStdout(repo, sln, $"--format={format}");
 
@@ -126,7 +126,7 @@ public sealed class ProjectDiffTests
         );
         var (sln, repo) = res;
 
-        await repo.WriteFileAsync("Sample/MyClass.cs", "// Some new content");
+        await repo.WriteAllTextAsync("Sample/MyClass.cs", "// Some new content");
 
         var output = await ExecuteAndReadStdout(repo, sln, $"--format={format}");
 
@@ -170,7 +170,7 @@ public sealed class ProjectDiffTests
         );
         var (sln, repo) = res;
 
-        await repo.WriteFileAsync("Sample/MyClass.cs", "// Some new content");
+        await repo.WriteAllTextAsync("Sample/MyClass.cs", "// Some new content");
 
         var output = await ExecuteAndReadStdout(repo, sln, $"--format={format}");
 
@@ -274,7 +274,7 @@ public sealed class ProjectDiffTests
                 var sln = await r.CreateSolutionAsync("Sample.sln", sln => sln.AddProject("Sample/Sample.csproj"));
                 r.CreateDirectory("Sample");
                 r.CreateProject("Sample/Sample.csproj");
-                await r.WriteFileAsync("Sample/MyClass.cs", "// Some content");
+                await r.WriteAllTextAsync("Sample/MyClass.cs", "// Some content");
 
                 return sln;
             }
@@ -304,7 +304,7 @@ public sealed class ProjectDiffTests
             {
                 r.CreateDirectory("Sample");
                 r.CreateProject("Sample/Sample.csproj");
-                await r.WriteFileAsync("Sample/MyClass.cs", "// Some content");
+                await r.WriteAllTextAsync("Sample/MyClass.cs", "// Some content");
             }
         );
 
@@ -326,7 +326,7 @@ public sealed class ProjectDiffTests
     {
         var console = new TestConsole(repository.WorkingDirectory);
         var tool = ProjectDiffTool.Create(console);
-        var exitCode = await tool.InvokeAsync(args);
+        var exitCode = await tool.InvokeAsync(args.Append("--log-level=Debug").ToArray());
         if (exitCode != 0)
         {
             var stderr = console.GetStandardError();

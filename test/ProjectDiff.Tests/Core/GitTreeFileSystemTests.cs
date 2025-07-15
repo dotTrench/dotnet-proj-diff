@@ -1,5 +1,6 @@
-﻿using LibGit2Sharp;
+﻿using System.Text;
 using Microsoft.Build.Evaluation;
+using Microsoft.Extensions.Logging.Abstractions;
 using ProjectDiff.Core;
 using ProjectDiff.Tests.Utils;
 
@@ -8,14 +9,78 @@ namespace ProjectDiff.Tests.Core;
 public sealed class GitTreeFileSystemTests
 {
     [Fact]
-    public async Task EnumerateDirectoriesReturnsDirectories()
+    public async Task ReadFile_ReturnsCorrectContent()
+    {
+        using var repo = await TestRepository.SetupAsync(async repo =>
+            await repo.WriteAllTextAsync("test.txt", "Hello, World!")
+        );
+
+        using var projects = new ProjectCollection();
+        var fileSystem = new GitTreeFileSystem(
+            repo,
+            repo.HeadTree,
+            projects,
+            [],
+            NullLogger<GitTreeFileSystem>.Instance
+        );
+
+        using var reader = fileSystem.ReadFile(Path.Combine(repo.WorkingDirectory, "test.txt"));
+        var content = await reader.ReadToEndAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal("Hello, World!", content);
+    }
+
+    [Fact]
+    public async Task ReadFileAllText_ReturnsCorrectContent()
+    {
+        using var repo = await TestRepository.SetupAsync(async repo =>
+            await repo.WriteAllTextAsync("test.txt", "Hello, World!")
+        );
+
+        using var projects = new ProjectCollection();
+        var fileSystem = new GitTreeFileSystem(
+            repo,
+            repo.HeadTree,
+            projects,
+            [],
+            NullLogger<GitTreeFileSystem>.Instance
+        );
+
+        var content = fileSystem.ReadFileAllText(Path.Combine(repo.WorkingDirectory, "test.txt"));
+
+        Assert.Equal("Hello, World!", content);
+    }
+
+    [Fact]
+    public async Task ReadFileAllBytes_ReturnsCorrectContent()
+    {
+        var expectedBytes = "Hello, World!"u8.ToArray();
+
+        using var repo = await TestRepository.SetupAsync(async repo =>
+            await repo.WriteAllTextAsync("test.txt", "Hello, World!")
+        );
+
+        using var projects = new ProjectCollection();
+        var fileSystem = new GitTreeFileSystem(
+            repo,
+            repo.HeadTree,
+            projects,
+            [],
+            NullLogger<GitTreeFileSystem>.Instance
+        );
+
+        var bytes = fileSystem.ReadFileAllBytes(Path.Combine(repo.WorkingDirectory, "test.txt"));
+
+        Assert.Equal(expectedBytes, bytes);
+    }
+
+    [Fact]
+    public async Task DirectoryExists_ReturnsTrueForExistingDirectory()
     {
         using var repo = await TestRepository.SetupAsync(async repo =>
             {
-                repo.CreateDirectory("subdir1");
-                repo.CreateDirectory("subdir2");
-                await repo.WriteFileAsync("subdir1/test.txt", "Hello, World!");
-                await repo.WriteFileAsync("subdir2/another.txt", "Another file");
+                repo.CreateDirectory("subdir");
+                await repo.WriteAllTextAsync("subdir/.gitkeep", "");
             }
         );
 
@@ -24,7 +89,157 @@ public sealed class GitTreeFileSystemTests
             repo,
             repo.HeadTree,
             projects,
-            []
+            [],
+            NullLogger<GitTreeFileSystem>.Instance
+        );
+
+        var exists = fileSystem.DirectoryExists(Path.Combine(repo.WorkingDirectory, "subdir"));
+
+        Assert.True(exists);
+    }
+
+    [Fact]
+    public async Task DirectoryExists_ReturnsFalseForNonExistingDirectory()
+    {
+        using var repo = await TestRepository.SetupAsync(_ => Task.CompletedTask);
+
+        using var projects = new ProjectCollection();
+        var fileSystem = new GitTreeFileSystem(
+            repo,
+            repo.HeadTree,
+            projects,
+            [],
+            NullLogger<GitTreeFileSystem>.Instance
+        );
+
+        var exists = fileSystem.DirectoryExists(Path.Combine(repo.WorkingDirectory, "nonexistent"));
+
+        Assert.False(exists);
+    }
+
+    [Fact]
+    public async Task FileExists_ReturnsTrueForExistingFile()
+    {
+        using var repo = await TestRepository.SetupAsync(async repo =>
+            await repo.WriteAllTextAsync("test.txt", "Hello, World!")
+        );
+
+        using var projects = new ProjectCollection();
+        var fileSystem = new GitTreeFileSystem(
+            repo,
+            repo.HeadTree,
+            projects,
+            [],
+            NullLogger<GitTreeFileSystem>.Instance
+        );
+
+        var exists = fileSystem.FileExists(Path.Combine(repo.WorkingDirectory, "test.txt"));
+
+        Assert.True(exists);
+    }
+
+    [Fact]
+    public async Task FileExists_ReturnsFalseForNonExistingFile()
+    {
+        using var repo = await TestRepository.SetupAsync(_ => Task.CompletedTask);
+
+        using var projects = new ProjectCollection();
+        var fileSystem = new GitTreeFileSystem(
+            repo,
+            repo.HeadTree,
+            projects,
+            [],
+            NullLogger<GitTreeFileSystem>.Instance
+        );
+
+        var exists = fileSystem.FileExists(Path.Combine(repo.WorkingDirectory, "nonexistent.txt"));
+
+        Assert.False(exists);
+    }
+
+    [Fact]
+    public async Task FileOrDirectoryExists_ReturnsTrueForExistingFile()
+    {
+        using var repo = await TestRepository.SetupAsync(async repo =>
+            await repo.WriteAllTextAsync("test.txt", "Hello, World!")
+        );
+
+        using var projects = new ProjectCollection();
+        var fileSystem = new GitTreeFileSystem(
+            repo,
+            repo.HeadTree,
+            projects,
+            [],
+            NullLogger<GitTreeFileSystem>.Instance
+        );
+
+        var exists = fileSystem.FileOrDirectoryExists(Path.Combine(repo.WorkingDirectory, "test.txt"));
+
+        Assert.True(exists);
+    }
+
+    [Fact]
+    public async Task FileOrDirectoryExists_ReturnsTrueForExistingDirectory()
+    {
+        using var repo = await TestRepository.SetupAsync(async repo =>
+            {
+                repo.CreateDirectory("subdir");
+                await repo.WriteAllTextAsync("subdir/.gitkeep", "");
+            }
+        );
+
+        using var projects = new ProjectCollection();
+        var fileSystem = new GitTreeFileSystem(
+            repo,
+            repo.HeadTree,
+            projects,
+            [],
+            NullLogger<GitTreeFileSystem>.Instance
+        );
+
+        var exists = fileSystem.FileOrDirectoryExists(Path.Combine(repo.WorkingDirectory, "subdir"));
+
+        Assert.True(exists);
+    }
+
+    [Fact]
+    public async Task FileOrDirectoryExists_ReturnsFalseForNonExistingPath()
+    {
+        using var repo = await TestRepository.SetupAsync(_ => Task.CompletedTask);
+
+        using var projects = new ProjectCollection();
+        var fileSystem = new GitTreeFileSystem(
+            repo,
+            repo.HeadTree,
+            projects,
+            [],
+            NullLogger<GitTreeFileSystem>.Instance
+        );
+
+        var exists = fileSystem.FileOrDirectoryExists(Path.Combine(repo.WorkingDirectory, "nonexistent"));
+
+        Assert.False(exists);
+    }
+
+    [Fact]
+    public async Task EnumerateDirectories_ReturnsDirectories()
+    {
+        using var repo = await TestRepository.SetupAsync(async repo =>
+            {
+                repo.CreateDirectory("subdir1");
+                repo.CreateDirectory("subdir2");
+                await repo.WriteAllTextAsync("subdir1/test.txt", "Hello, World!");
+                await repo.WriteAllTextAsync("subdir2/another.txt", "Another file");
+            }
+        );
+
+        using var projects = new ProjectCollection();
+        var fileSystem = new GitTreeFileSystem(
+            repo,
+            repo.HeadTree,
+            projects,
+            [],
+            NullLogger<GitTreeFileSystem>.Instance
         );
 
         var directories = fileSystem.EnumerateDirectories(
@@ -38,19 +253,19 @@ public sealed class GitTreeFileSystemTests
             Path.Combine(repo.WorkingDirectory, "subdir1"),
             Path.Combine(repo.WorkingDirectory, "subdir2")
         };
-        
+
         Assert.Equivalent(expectedDirectories, directories);
     }
-    
+
     [Fact]
-    public async Task EnumerateDirectoriesInSubdirectoryReturnsSubdirectories()
+    public async Task EnumerateDirectories_InSubdirectoryReturnsSubdirectories()
     {
         using var repo = await TestRepository.SetupAsync(async repo =>
             {
                 repo.CreateDirectory("subdir");
                 repo.CreateDirectory("subdir/nested");
-                await repo.WriteFileAsync("subdir/test.txt", "Hello, World!");
-                await repo.WriteFileAsync("subdir/nested/nested.txt", "Nested file");
+                await repo.WriteAllTextAsync("subdir/test.txt", "Hello, World!");
+                await repo.WriteAllTextAsync("subdir/nested/nested.txt", "Nested file");
             }
         );
 
@@ -59,7 +274,8 @@ public sealed class GitTreeFileSystemTests
             repo,
             repo.HeadTree,
             projects,
-            []
+            [],
+            NullLogger<GitTreeFileSystem>.Instance
         );
 
         var directories = fileSystem.EnumerateDirectories(
@@ -72,12 +288,12 @@ public sealed class GitTreeFileSystemTests
         {
             Path.Combine(repo.WorkingDirectory, "subdir", "nested")
         };
-        
+
         Assert.Equivalent(expectedDirectories, directories);
     }
-    
+
     [Fact]
-    public async Task EnumerateDirectoriesWithSearchOptionAllDirectoriesReturnsAllDirectories()
+    public async Task EnumerateDirectories_WithSearchOptionAllDirectoriesReturnsAllDirectories()
     {
         using var repo = await TestRepository.SetupAsync(async repo =>
             {
@@ -85,10 +301,10 @@ public sealed class GitTreeFileSystemTests
                 repo.CreateDirectory("subdir2");
                 repo.CreateDirectory("subdir1/nested");
                 repo.CreateDirectory("subdir2/another");
-                await repo.WriteFileAsync("subdir1/test.txt", "Hello, World!");
-                await repo.WriteFileAsync("subdir2/another/another.txt", "Another file");
-                await repo.WriteFileAsync("subdir1/nested/nested.txt", "Nested file");
-                await repo.WriteFileAsync("test.txt", "Root file");
+                await repo.WriteAllTextAsync("subdir1/test.txt", "Hello, World!");
+                await repo.WriteAllTextAsync("subdir2/another/another.txt", "Another file");
+                await repo.WriteAllTextAsync("subdir1/nested/nested.txt", "Nested file");
+                await repo.WriteAllTextAsync("test.txt", "Root file");
             }
         );
 
@@ -97,7 +313,8 @@ public sealed class GitTreeFileSystemTests
             repo,
             repo.HeadTree,
             projects,
-            []
+            [],
+            NullLogger<GitTreeFileSystem>.Instance
         );
 
         var directories = fileSystem.EnumerateDirectories(
@@ -106,16 +323,17 @@ public sealed class GitTreeFileSystemTests
             SearchOption.AllDirectories
         ).ToList();
 
-        string[] expectedDirectories = [
+        string[] expectedDirectories =
+        [
             Path.Combine(repo.WorkingDirectory, "subdir1"),
             Path.Combine(repo.WorkingDirectory, "subdir1", "nested"),
             Path.Combine(repo.WorkingDirectory, "subdir2"),
             Path.Combine(repo.WorkingDirectory, "subdir2", "another")
         ];
-        
+
         Assert.Equivalent(expectedDirectories, directories);
     }
-    
+
     [Fact]
     public void EnumerateFilesInEmptyDirectoryReturnsEmpty()
     {
@@ -126,7 +344,8 @@ public sealed class GitTreeFileSystemTests
             repo,
             repo.HeadTree,
             projects,
-            []
+            [],
+            NullLogger<GitTreeFileSystem>.Instance
         );
 
         var files = fileSystem.EnumerateFiles(
@@ -139,11 +358,11 @@ public sealed class GitTreeFileSystemTests
     }
 
     [Fact]
-    public async Task EnumerateFilesInDirectoryWithFileReturnsFile()
+    public async Task EnumerateFiles_InDirectoryWithFileReturnsFile()
     {
         using var repo = await TestRepository.SetupAsync(async repo =>
             {
-                await repo.WriteFileAsync("test.txt", "Hello, World!");
+                await repo.WriteAllTextAsync("test.txt", "Hello, World!");
             }
         );
 
@@ -152,7 +371,8 @@ public sealed class GitTreeFileSystemTests
             repo,
             repo.HeadTree,
             projects,
-            []
+            [],
+            NullLogger<GitTreeFileSystem>.Instance
         );
 
         var files = fileSystem.EnumerateFiles(
@@ -170,19 +390,19 @@ public sealed class GitTreeFileSystemTests
     }
 
     [Fact]
-    public async Task EnumerateFilesInDirectoryWithSubdirectoryReturnsFiles()
+    public async Task EnumerateFiles_InDirectoryWithSubdirectoryReturnsFiles()
     {
         using var repo = await TestRepository.SetupAsync(async repo =>
             {
                 repo.CreateDirectory("subdir");
-                await repo.WriteFileAsync("subdir/test.txt", "Hello, World!");
-                await repo.WriteFileAsync("subdir/another.txt", "Another file");
+                await repo.WriteAllTextAsync("subdir/test.txt", "Hello, World!");
+                await repo.WriteAllTextAsync("subdir/another.txt", "Another file");
 
                 // Should not be included
-                await repo.WriteFileAsync("test.txt", "Root file");
-                
+                await repo.WriteAllTextAsync("test.txt", "Root file");
+
                 repo.CreateDirectory("subdir/nested");
-                await repo.WriteFileAsync("subdir/nested/nested.txt", "Nested file");
+                await repo.WriteAllTextAsync("subdir/nested/nested.txt", "Nested file");
             }
         );
 
@@ -191,7 +411,8 @@ public sealed class GitTreeFileSystemTests
             repo,
             repo.HeadTree,
             projects,
-            []
+            [],
+            NullLogger<GitTreeFileSystem>.Instance
         );
 
         var files = fileSystem.EnumerateFiles(
@@ -210,14 +431,14 @@ public sealed class GitTreeFileSystemTests
     }
 
     [Fact]
-    public async Task EnumerateFilesWithSearchOptionAllDirectoriesReturnsAllFiles()
+    public async Task EnumerateFiles_WithSearchOptionAllDirectoriesReturnsAllFiles()
     {
         using var repo = await TestRepository.SetupAsync(async repo =>
             {
                 repo.CreateDirectory("subdir");
-                await repo.WriteFileAsync("subdir/test.txt", "Hello, World!");
-                await repo.WriteFileAsync("subdir/another.txt", "Another file");
-                await repo.WriteFileAsync("test.txt", "Root file");
+                await repo.WriteAllTextAsync("subdir/test.txt", "Hello, World!");
+                await repo.WriteAllTextAsync("subdir/another.txt", "Another file");
+                await repo.WriteAllTextAsync("test.txt", "Root file");
             }
         );
 
@@ -226,7 +447,8 @@ public sealed class GitTreeFileSystemTests
             repo,
             repo.HeadTree,
             projects,
-            []
+            [],
+            NullLogger<GitTreeFileSystem>.Instance
         );
 
         var files = fileSystem.EnumerateFiles(
@@ -242,20 +464,20 @@ public sealed class GitTreeFileSystemTests
             Path.Combine(repo.WorkingDirectory, "test.txt")
         ];
 
-        
+
         Assert.Equivalent(expectedFiles, files);
     }
 
 
     [Fact]
-    public async Task EnumerateFilesInSubdirectoryWithSearchOptionAllDirectoriesReturnsFilesInSubdirectory()
+    public async Task EnumerateFiles_InSubdirectoryWithSearchOptionAllDirectoriesReturnsFilesInSubdirectory()
     {
         using var repo = await TestRepository.SetupAsync(async repo =>
             {
                 repo.CreateDirectory("subdir");
-                await repo.WriteFileAsync("subdir/test.txt", "Hello, World!");
-                await repo.WriteFileAsync("subdir/another.txt", "Another file");
-                await repo.WriteFileAsync("test.txt", "Root file");
+                await repo.WriteAllTextAsync("subdir/test.txt", "Hello, World!");
+                await repo.WriteAllTextAsync("subdir/another.txt", "Another file");
+                await repo.WriteAllTextAsync("test.txt", "Root file");
             }
         );
 
@@ -264,7 +486,8 @@ public sealed class GitTreeFileSystemTests
             repo,
             repo.HeadTree,
             projects,
-            []
+            [],
+            NullLogger<GitTreeFileSystem>.Instance
         );
 
         var files = fileSystem.EnumerateFiles(
