@@ -1,18 +1,16 @@
 ﻿using System.CommandLine;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
-using Microsoft.Build.Construction;
-using Microsoft.Build.Evaluation;
 using Microsoft.Extensions.Logging;
 using ProjectDiff.Core;
 using ProjectDiff.Core.Entrypoints;
+using ProjectDiff.Tool.OutputFormatters;
 
 namespace ProjectDiff.Tool;
 
 public sealed class ProjectDiffCommand : RootCommand
 {
-    private static readonly JsonSerializerOptions SerializerOptions =
+    public static readonly JsonSerializerOptions JsonSerializerOptions =
         new(JsonSerializerDefaults.Web)
         {
             Converters =
@@ -122,7 +120,16 @@ public sealed class ProjectDiffCommand : RootCommand
     private static readonly Option<LogLevel> LogLevelOption = new("--log-level")
     {
         DefaultValueFactory = _ => LogLevel.Information,
-        Description = "Set the log level for the command. Default is 'Information'.",
+        Description = "Set the log level for the command",
+    };
+
+    private static readonly Option<string?> MicrosoftBuildTraversalVersionOption = new(
+        "--microsoft-build-traversal-version",
+        "microsoft-build-traversal-version"
+    )
+    {
+        Description = "Set the version of Microsoft.Build.Traversal when generating traversal projects to use",
+        DefaultValueFactory = _ => null,
     };
 
     private readonly IConsole _console;
@@ -145,6 +152,7 @@ public sealed class ProjectDiffCommand : RootCommand
         Options.Add(OutputOption);
         Options.Add(IgnoreChangedFilesOption);
         Options.Add(LogLevelOption);
+        Options.Add(MicrosoftBuildTraversalVersionOption);
         SetAction(ExecuteAsync);
     }
 
@@ -165,6 +173,7 @@ public sealed class ProjectDiffCommand : RootCommand
             AbsolutePaths = parseResult.GetValue(AbsolutePaths),
             IgnoreChangedFile = parseResult.GetRequiredValue(IgnoreChangedFilesOption),
             LogLevel = parseResult.GetValue(LogLevelOption),
+            MicrosoftBuildTraversalVersion = parseResult.GetValue(MicrosoftBuildTraversalVersionOption)
         };
 
         return ExecuteCoreAsync(settings, cancellationToken);
@@ -183,7 +192,6 @@ public sealed class ProjectDiffCommand : RootCommand
         );
         var logger = loggerFactory.CreateLogger<ProjectDiffCommand>();
 
-        var diffOutput = new DiffOutput(settings.Output, _console);
         OutputFormat outputFormat;
         if (settings.Format is not null)
         {
@@ -249,27 +257,23 @@ public sealed class ProjectDiffCommand : RootCommand
         logger.LogInformation("Found {Count} projects in diff", projects.Count);
         if (logger.IsEnabled(LogLevel.Debug))
         {
-            logger.LogDebug("Diff projects: {Projects}", projects.Select(it => new { it.Path, it.Status, ReferencedProjects = string.Join(',', it.ReferencedProjects) }));
+            logger.LogDebug(
+                "Diff projects: {Projects}",
+                projects.Select(it => new
+                    { it.Path, it.Status, ReferencedProjects = string.Join(',', it.ReferencedProjects) }
+                )
+            );
         }
 
-        switch (outputFormat)
-        {
-            case OutputFormat.Plain:
-                await WritePlain(diffOutput, projects, settings.AbsolutePaths);
-                break;
-            case OutputFormat.Json:
-                await WriteJson(diffOutput, projects, settings.AbsolutePaths);
-                break;
-            case OutputFormat.Slnf:
-                await WriteSlnf(diffOutput, settings.Solution!, projects);
-                break;
-            case OutputFormat.Traversal:
-                await WriteTraversal(diffOutput, projects, settings.AbsolutePaths);
-                break;
-            default:
-                logger.LogError("Unknown output format {Format}", settings.Format);
-                return 1;
-        }
+        var formatter = GetFormatter(outputFormat, settings);
+        logger.LogDebug("Using output formatter {Formatter}", formatter.GetType().Name);
+
+        var output = new Output(settings.Output, _console);
+        await formatter.WriteAsync(
+            projects,
+            output,
+            cancellationToken
+        );
 
         return 0;
 
@@ -284,109 +288,20 @@ public sealed class ProjectDiffCommand : RootCommand
             };
     }
 
-    private static async Task WritePlain(
-        DiffOutput output,
-        IEnumerable<DiffProject> diff,
-        bool absolutePaths
-    )
+    private static IOutputFormatter GetFormatter(OutputFormat format, ProjectDiffSettings settings) => format switch
     {
-        await using var stream = output.Open();
-        await using var writer = new StreamWriter(stream);
-        foreach (var project in diff)
-        {
-            var path = NormalizePath(
-                output.RootDirectory,
-                project.Path,
-                absolutePaths
-            );
-            await writer.WriteLineAsync(path);
-        }
-    }
-
-    private static async Task WriteJson(
-        DiffOutput output,
-        IEnumerable<DiffProject> diff,
-        bool absolutePaths
-    )
-    {
-        diff = diff.Select(project => project with
-            {
-                Path = NormalizePath(
-                    output.RootDirectory,
-                    project.Path,
-                    absolutePaths
-                ),
-                ReferencedProjects = project.ReferencedProjects
-                    .Select(refProject => NormalizePath(
-                            output.RootDirectory,
-                            refProject,
-                            absolutePaths
-                        )
-                    ).ToList()
-            }
-        );
-
-        await using var stream = output.Open();
-        await JsonSerializer.SerializeAsync(stream, diff, SerializerOptions);
-    }
-
-    private static string NormalizePath(string directory, string path, bool absolutePaths) =>
-        absolutePaths ? path.Replace('\\', '/') : Path.GetRelativePath(directory, path).Replace('\\', '/');
-
-    private static async Task WriteSlnf(
-        DiffOutput output,
-        FileInfo solution,
-        IEnumerable<DiffProject> diff
-    )
-    {
-        var solutionObject = new JsonObject
-        {
-            {
-                "path", Path.GetRelativePath(
-                    output.RootDirectory,
-                    solution.FullName
-                )
-            }
-        };
-        var projects = new JsonArray();
-        foreach (var project in diff)
-        {
-            var projectPath = Path.GetRelativePath(
-                solution.Directory!.FullName,
-                project.Path
-            ).Replace('/', '\\');
-            projects.Add(projectPath);
-        }
-
-        solutionObject.Add("projects", projects);
-
-        var root = new JsonObject { { "solution", solutionObject } };
-
-        await using var stream = output.Open();
-        await JsonSerializer.SerializeAsync(stream, root, SerializerOptions);
-    }
-
-    private static async Task WriteTraversal(
-        DiffOutput output,
-        IEnumerable<DiffProject> diff,
-        bool absolutePaths
-    )
-    {
-        var element = ProjectRootElement.Create(NewProjectFileOptions.None);
-        element.Sdk = "Microsoft.Build.Traversal";
-        foreach (var project in diff)
-        {
-            var path = !absolutePaths
-                ? Path.GetRelativePath(output.RootDirectory, project.Path).Replace('/', '\\')
-                : project.Path.Replace('/', '\\');
-
-            element.AddItem("ProjectReference", path);
-        }
-
-        await using var stream = output.Open();
-        await using var writer = new StreamWriter(stream);
-        element.Save(writer);
-    }
+        OutputFormat.Json => new JsonOutputFormatter(settings.AbsolutePaths, JsonSerializerOptions),
+        OutputFormat.Plain => new PlainOutputFormatter(settings.AbsolutePaths),
+        OutputFormat.Slnf => new SlnfOutputFormatter(
+            settings.Solution ?? throw new ArgumentException("Solution must be set when using SlnfOutputFormatter"),
+            JsonSerializerOptions
+        ),
+        OutputFormat.Traversal => new TraversalOutputFormatter(
+            settings.MicrosoftBuildTraversalVersion,
+            settings.AbsolutePaths
+        ),
+        _ => throw new ArgumentOutOfRangeException(nameof(format), format, "Unknown output format")
+    };
 
     private static OutputFormat GetOutputFormatFromExtension(string extension) => extension switch
     {
@@ -395,15 +310,4 @@ public sealed class ProjectDiffCommand : RootCommand
         ".json" => OutputFormat.Json,
         _ => OutputFormat.Plain
     };
-
-
-    private sealed class DiffOutput(FileInfo? outputFile, IConsole console)
-    {
-        public string RootDirectory => outputFile?.DirectoryName ?? console.WorkingDirectory;
-
-        public Stream Open()
-        {
-            return outputFile?.Create() ?? console.OpenStandardOutput();
-        }
-    }
 }

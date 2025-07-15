@@ -14,160 +14,160 @@ public static class BuildGraphDiff
 
         return instance.Execute(previous, modifiedFiles.ToFrozenSet());
     }
-}
 
-internal sealed class GraphDiffInstance
-{
-    private readonly BuildGraph _graph;
-    private readonly Dictionary<string, bool> _modifiedProjects;
-
-    public GraphDiffInstance(BuildGraph graph)
+    private sealed class GraphDiffInstance
     {
-        _modifiedProjects = new Dictionary<string, bool>(graph.Projects.Count);
-        _graph = graph;
-    }
+        private readonly BuildGraph _graph;
+        private readonly Dictionary<string, bool> _modifiedProjects;
 
-    public IEnumerable<DiffProject> Execute(BuildGraph previous, FrozenSet<string> modifiedFiles)
-    {
-        foreach (var currentProject in _graph.Projects)
+        public GraphDiffInstance(BuildGraph graph)
         {
-            var previousProject = previous.Projects.FirstOrDefault(it => it.Matches(currentProject));
-            if (previousProject is null)
+            _modifiedProjects = new Dictionary<string, bool>(graph.Projects.Count);
+            _graph = graph;
+        }
+
+        public IEnumerable<DiffProject> Execute(BuildGraph previous, FrozenSet<string> modifiedFiles)
+        {
+            foreach (var currentProject in _graph.Projects)
             {
-                yield return new DiffProject
+                var previousProject = previous.Projects.FirstOrDefault(it => it.Matches(currentProject));
+                if (previousProject is null)
                 {
-                    Path = currentProject.FullPath,
-                    Status = DiffStatus.Added,
-                    ReferencedProjects = currentProject.References,
-                };
-            }
-            else if (HasProjectChanged(previousProject, currentProject, modifiedFiles))
-            {
-                yield return new DiffProject
+                    yield return new DiffProject
+                    {
+                        Path = currentProject.FullPath,
+                        Status = DiffStatus.Added,
+                        ReferencedProjects = currentProject.References,
+                    };
+                }
+                else if (HasProjectChanged(previousProject, currentProject, modifiedFiles))
                 {
-                    Path = currentProject.FullPath,
-                    Status = DiffStatus.Modified,
-                    ReferencedProjects = currentProject.References,
-                };
-            }
-            else if (HasProjectReferencesChanged(previousProject, currentProject, modifiedFiles))
-            {
-                yield return new DiffProject
+                    yield return new DiffProject
+                    {
+                        Path = currentProject.FullPath,
+                        Status = DiffStatus.Modified,
+                        ReferencedProjects = currentProject.References,
+                    };
+                }
+                else if (HasProjectReferencesChanged(previousProject, currentProject, modifiedFiles))
                 {
-                    Path = currentProject.FullPath,
-                    Status = DiffStatus.ReferenceChanged,
-                    ReferencedProjects = currentProject.References,
-                };
+                    yield return new DiffProject
+                    {
+                        Path = currentProject.FullPath,
+                        Status = DiffStatus.ReferenceChanged,
+                        ReferencedProjects = currentProject.References,
+                    };
+                }
             }
-        }
 
-        foreach (var previousProject in previous.Projects)
-        {
-            var existsInCurrent = _graph.Projects.Any(it => it.Matches(previousProject));
-            if (!existsInCurrent)
+            foreach (var previousProject in previous.Projects)
             {
-                yield return new DiffProject
+                var existsInCurrent = _graph.Projects.Any(it => it.Matches(previousProject));
+                if (!existsInCurrent)
                 {
-                    Path = previousProject.FullPath,
-                    Status = DiffStatus.Removed,
-                    ReferencedProjects = [],
-                };
+                    yield return new DiffProject
+                    {
+                        Path = previousProject.FullPath,
+                        Status = DiffStatus.Removed,
+                        ReferencedProjects = [],
+                    };
+                }
             }
         }
-    }
 
-    private bool HasProjectChanged(
-        BuildGraphProject previous,
-        BuildGraphProject current,
-        FrozenSet<string> modifiedFiles
-    )
-    {
-        if (_modifiedProjects.TryGetValue(current.FullPath, out var isModified))
+        private bool HasProjectChanged(
+            BuildGraphProject previous,
+            BuildGraphProject current,
+            FrozenSet<string> modifiedFiles
+        )
         {
-            return isModified;
+            if (_modifiedProjects.TryGetValue(current.FullPath, out var isModified))
+            {
+                return isModified;
+            }
+
+            if (HasProjectInputFilesChanged(previous.InputFiles, current.InputFiles, modifiedFiles))
+            {
+                _modifiedProjects.Add(current.FullPath, true);
+                return true;
+            }
+
+            _modifiedProjects.Add(current.FullPath, false);
+            return false;
         }
 
-        if (HasProjectInputFilesChanged(previous.InputFiles, current.InputFiles, modifiedFiles))
+        private static bool HasProjectInputFilesChanged(
+            IReadOnlyCollection<string> previous,
+            IReadOnlyCollection<string> current,
+            FrozenSet<string> modifiedFiles
+        )
         {
-            _modifiedProjects.Add(current.FullPath, true);
-            return true;
-        }
-
-        _modifiedProjects.Add(current.FullPath, false);
-        return false;
-    }
-
-    private static bool HasProjectInputFilesChanged(
-        IReadOnlyCollection<string> previous,
-        IReadOnlyCollection<string> current,
-        FrozenSet<string> modifiedFiles
-    )
-    {
-        if (previous.Count != current.Count)
-        {
-            return true;
-        }
-
-        foreach (var file in current)
-        {
-            if (!previous.Contains(file))
+            if (previous.Count != current.Count)
             {
                 return true;
             }
 
-            if (modifiedFiles.Contains(file))
+            foreach (var file in current)
             {
-                return true;
+                if (!previous.Contains(file))
+                {
+                    return true;
+                }
+
+                if (modifiedFiles.Contains(file))
+                {
+                    return true;
+                }
             }
+
+            foreach (var file in previous)
+            {
+                if (!current.Contains(file))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
-        foreach (var file in previous)
+
+        private bool HasProjectReferencesChanged(
+            BuildGraphProject previous,
+            BuildGraphProject current,
+            FrozenSet<string> modifiedFiles
+        )
         {
-            if (!current.Contains(file))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-
-    private bool HasProjectReferencesChanged(
-        BuildGraphProject previous,
-        BuildGraphProject current,
-        FrozenSet<string> modifiedFiles
-    )
-    {
-        if (previous.References.Count != current.References.Count)
-        {
-            return true;
-        }
-
-        foreach (var reference in current.References)
-        {
-            if (!previous.References.Contains(reference))
+            if (previous.References.Count != current.References.Count)
             {
                 return true;
             }
 
-            var currentReference = _graph.Projects.First(it => it.FullPath == reference);
-            var previousReference = _graph.Projects.First(it => it.FullPath == reference);
-
-            if (HasProjectChanged(previousReference, currentReference, modifiedFiles))
+            foreach (var reference in current.References)
             {
-                return true;
-            }
-        }
+                if (!previous.References.Contains(reference))
+                {
+                    return true;
+                }
 
-        foreach (var reference in previous.References)
-        {
-            if (!current.References.Contains(reference))
+                var currentReference = _graph.Projects.First(it => it.FullPath == reference);
+                var previousReference = _graph.Projects.First(it => it.FullPath == reference);
+
+                if (HasProjectChanged(previousReference, currentReference, modifiedFiles))
+                {
+                    return true;
+                }
+            }
+
+            foreach (var reference in previous.References)
             {
-                return true;
+                if (!current.References.Contains(reference))
+                {
+                    return true;
+                }
             }
-        }
 
-        return false;
+            return false;
+        }
     }
 }

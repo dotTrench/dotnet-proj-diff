@@ -1,0 +1,2 @@
+﻿{TempPath}ProjectA
+{TempPath}ProjectB

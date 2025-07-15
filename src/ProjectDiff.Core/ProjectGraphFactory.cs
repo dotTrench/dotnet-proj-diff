@@ -71,6 +71,7 @@ public sealed class ProjectGraphFactory
         CancellationToken cancellationToken = default
     )
     {
+        _logger.LogInformation("Building project graph for working directory");
         using var projectCollection = new ProjectCollection();
 
         var fs = new DefaultFileSystem();

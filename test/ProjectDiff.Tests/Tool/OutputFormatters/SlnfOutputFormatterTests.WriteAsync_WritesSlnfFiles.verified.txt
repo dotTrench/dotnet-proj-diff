@@ -1,0 +1,9 @@
+﻿{
+  solution: {
+    path: solution.sln,
+    projects: [
+      ProjectA,
+      ProjectB
+    ]
+  }
+}
