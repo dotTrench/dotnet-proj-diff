@@ -1,4 +1,6 @@
-﻿namespace ProjectDiff.Tool;
+﻿using Microsoft.Extensions.Logging;
+
+namespace ProjectDiff.Tool;
 
 public sealed class ProjectDiffSettings
 {
@@ -14,4 +16,5 @@ public sealed class ProjectDiffSettings
     public required OutputFormat? Format { get; init; }
     public required FileInfo? Output { get; init; }
     public required FileInfo[] IgnoreChangedFile { get; init; } = [];
+    public LogLevel LogLevel { get; init; } = LogLevel.Information;
 }

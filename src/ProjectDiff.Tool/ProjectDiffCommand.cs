@@ -4,6 +4,7 @@ using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using Microsoft.Build.Construction;
 using Microsoft.Build.Evaluation;
+using Microsoft.Extensions.Logging;
 using ProjectDiff.Core;
 using ProjectDiff.Core.Entrypoints;
 
@@ -118,6 +119,12 @@ public sealed class ProjectDiffCommand : RootCommand
             "Ignore changes in specific files. If these files are a part of the build evaluation process they will still be evaluated, however these files will be considered unchanged by the diff process"
     };
 
+    private static readonly Option<LogLevel> LogLevelOption = new("--log-level")
+    {
+        DefaultValueFactory = _ => LogLevel.Information,
+        Description = "Set the log level for the command. Default is 'Information'.",
+    };
+
     private readonly IConsole _console;
 
 
@@ -137,6 +144,7 @@ public sealed class ProjectDiffCommand : RootCommand
         Options.Add(Format);
         Options.Add(OutputOption);
         Options.Add(IgnoreChangedFilesOption);
+        Options.Add(LogLevelOption);
         SetAction(ExecuteAsync);
     }
 
@@ -155,7 +163,8 @@ public sealed class ProjectDiffCommand : RootCommand
             IncludeAdded = parseResult.GetValue(IncludeAdded),
             IncludeReferencing = parseResult.GetValue(IncludeReferencing),
             AbsolutePaths = parseResult.GetValue(AbsolutePaths),
-            IgnoreChangedFile = parseResult.GetRequiredValue(IgnoreChangedFilesOption)
+            IgnoreChangedFile = parseResult.GetRequiredValue(IgnoreChangedFilesOption),
+            LogLevel = parseResult.GetValue(LogLevelOption),
         };
 
         return ExecuteCoreAsync(settings, cancellationToken);
@@ -166,6 +175,14 @@ public sealed class ProjectDiffCommand : RootCommand
         CancellationToken cancellationToken
     )
     {
+        using var loggerFactory = LoggerFactory.Create(x =>
+            {
+                x.AddConsole(c => c.LogToStandardErrorThreshold = LogLevel.Trace); // Log everything to stderr
+                x.SetMinimumLevel(settings.LogLevel);
+            }
+        );
+        var logger = loggerFactory.CreateLogger<ProjectDiffCommand>();
+
         var diffOutput = new DiffOutput(settings.Output, _console);
         OutputFormat outputFormat;
         if (settings.Format is not null)
@@ -174,24 +191,41 @@ public sealed class ProjectDiffCommand : RootCommand
         }
         else if (settings.Output is not null)
         {
+            logger.LogDebug("Detecting output format from file extension {Extension}", settings.Output.Extension);
             outputFormat = GetOutputFormatFromExtension(settings.Output.Extension);
+            logger.LogDebug("Detected output format {Format}", outputFormat);
         }
         else
         {
             outputFormat = OutputFormat.Plain;
         }
 
+        if (outputFormat == OutputFormat.Slnf && settings.Solution is null)
+        {
+            logger.LogError("Cannot output as slnf format without solution file specified.");
+            return 1;
+        }
+
+        logger.LogDebug("Using output format {Format}", outputFormat);
+
         var executor = new ProjectDiffExecutor(
             new ProjectDiffExecutorOptions
             {
                 FindMergeBase = settings.MergeBase,
                 IgnoreChangedFiles = settings.IgnoreChangedFile,
-            }
+            },
+            loggerFactory
         );
 
         IEntrypointProvider entrypointProvider = settings.Solution is not null
-            ? new SolutionEntrypointProvider(settings.Solution)
-            : new DirectoryScanEntrypointProvider(_console.WorkingDirectory);
+            ? new SolutionEntrypointProvider(
+                settings.Solution,
+                loggerFactory.CreateLogger<SolutionEntrypointProvider>()
+            )
+            : new DirectoryScanEntrypointProvider(
+                _console.WorkingDirectory,
+                loggerFactory.CreateLogger<DirectoryScanEntrypointProvider>()
+            );
 
         var result = await executor.GetProjectDiff(
             settings.Solution?.DirectoryName ?? _console.WorkingDirectory,
@@ -203,35 +237,37 @@ public sealed class ProjectDiffCommand : RootCommand
 
         if (result.Status != ProjectDiffExecutionStatus.Success)
         {
-            WriteError(_console, $"Failed to calculate project diff: {result.Status}");
+            logger.LogError("Failed to calculate project diff '{Status}'", result.Status);
             return 1;
         }
 
-        var diff = result.Projects.Where(ShouldInclude)
+        var projects = result.Projects.Where(ShouldInclude)
             .OrderBy(it => it.ReferencedProjects.Count)
-            .ThenBy(it => it.Path);
+            .ThenBy(it => it.Path)
+            .ToList();
+
+        logger.LogInformation("Found {Count} projects in diff", projects.Count);
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("Diff projects: {Projects}", projects.Select(it => new { it.Path, it.Status, ReferencedProjects = string.Join(',', it.ReferencedProjects) }));
+        }
+
         switch (outputFormat)
         {
             case OutputFormat.Plain:
-                await WritePlain(diffOutput, diff, settings.AbsolutePaths);
+                await WritePlain(diffOutput, projects, settings.AbsolutePaths);
                 break;
             case OutputFormat.Json:
-                await WriteJson(diffOutput, diff, settings.AbsolutePaths);
+                await WriteJson(diffOutput, projects, settings.AbsolutePaths);
                 break;
             case OutputFormat.Slnf:
-                if (settings.Solution is null)
-                {
-                    WriteError(_console, "Cannot output slnf format without solution file specified.");
-                    return 1;
-                }
-
-                await WriteSlnf(diffOutput, settings.Solution, diff);
+                await WriteSlnf(diffOutput, settings.Solution!, projects);
                 break;
             case OutputFormat.Traversal:
-                await WriteTraversal(diffOutput, diff, settings.AbsolutePaths);
+                await WriteTraversal(diffOutput, projects, settings.AbsolutePaths);
                 break;
             default:
-                WriteError(_console, $"Unknown output format {settings.Format}");
+                logger.LogError("Unknown output format {Format}", settings.Format);
                 return 1;
         }
 
@@ -350,11 +386,6 @@ public sealed class ProjectDiffCommand : RootCommand
         await using var stream = output.Open();
         await using var writer = new StreamWriter(stream);
         element.Save(writer);
-    }
-
-    private static void WriteError(IConsole console, string error)
-    {
-        console.Error.WriteLine(error);
     }
 
     private static OutputFormat GetOutputFormatFromExtension(string extension) => extension switch

@@ -1,4 +1,6 @@
-﻿using ProjectDiff.Core;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using ProjectDiff.Core;
+using ProjectDiff.Core.Entrypoints;
 using ProjectDiff.Tests.Utils;
 
 namespace ProjectDiff.Tests.Core;
@@ -10,19 +12,16 @@ public sealed class MultiFrameworkTests
     {
         using var res = await TestRepository.SetupAsync(static async r =>
             {
-                var sln = await r.CreateSolutionAsync("Sample.sln", sln => sln.AddProject("Sample/Sample.csproj"));
                 r.CreateDirectory("Sample");
-                var project = r.CreateProject(
+                await r.WriteAllTextAsync("Sample/MyClass.cs", "// Some content");
+                return r.CreateProject(
                     "Sample/Sample.csproj",
                     p => { p.AddProperty("TargetFrameworks", "net9.0;net8.0;netstandard2.0"); }
                 );
-                await r.WriteFileAsync("Sample/MyClass.cs", "// Some content");
-
-                return (sln, project);
             }
         );
-        var ((sln, project), repo) = res;
-        await repo.WriteFileAsync("Sample/MyClass.cs", "// Some new content");
+        var (project, repo) = res;
+        await repo.WriteAllTextAsync("Sample/MyClass.cs", "// Some new content");
         var executor = new ProjectDiffExecutor(
             new ProjectDiffExecutorOptions
             {
@@ -30,8 +29,11 @@ public sealed class MultiFrameworkTests
             }
         );
         var result = await executor.GetProjectDiff(
-            new FileInfo(sln),
-            "HEAD",
+            repo.WorkingDirectory,
+            new DirectoryScanEntrypointProvider(
+                repo.WorkingDirectory,
+                NullLogger<DirectoryScanEntrypointProvider>.Instance
+            ),
             cancellationToken: TestContext.Current.CancellationToken
         );
 

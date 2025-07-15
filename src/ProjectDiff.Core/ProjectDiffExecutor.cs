@@ -1,36 +1,24 @@
 ﻿using System.Collections.Frozen;
 using LibGit2Sharp;
 using Microsoft.Build.Graph;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using ProjectDiff.Core.Entrypoints;
+using LogLevel = Microsoft.Extensions.Logging.LogLevel;
 
 namespace ProjectDiff.Core;
 
 public class ProjectDiffExecutor
 {
     private readonly ProjectDiffExecutorOptions _options;
+    private readonly ILoggerFactory _loggerFactory;
+    private readonly ILogger<ProjectDiffExecutor> _logger;
 
-    public ProjectDiffExecutor(ProjectDiffExecutorOptions options)
+    public ProjectDiffExecutor(ProjectDiffExecutorOptions options, ILoggerFactory? loggerFactory = null)
     {
         _options = options;
-    }
-
-    public async Task<ProjectDiffResult> GetProjectDiff(
-        FileInfo solutionFile,
-        string baseCommitRef = "HEAD",
-        string? headCommitRef = null,
-        CancellationToken cancellationToken = default
-    )
-    {
-        return await GetProjectDiff(
-            solutionFile.DirectoryName ?? throw new ArgumentException(
-                $"{nameof(solutionFile)}.DirectoryName is null",
-                nameof(solutionFile)
-            ),
-            new SolutionEntrypointProvider(solutionFile),
-            baseCommitRef,
-            headCommitRef,
-            cancellationToken
-        );
+        _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
+        _logger = _loggerFactory.CreateLogger<ProjectDiffExecutor>();
     }
 
     public async Task<ProjectDiffResult> GetProjectDiff(
@@ -41,19 +29,26 @@ public class ProjectDiffExecutor
         CancellationToken cancellationToken = default
     )
     {
+        _logger.LogDebug("Discovering repository from path '{Path}'", path);
         var repoPath = Repository.Discover(path);
         if (repoPath is null)
         {
+            _logger.LogError("Could not find a Git repository for path '{Path}'", path);
             return new ProjectDiffResult
             {
                 Status = ProjectDiffExecutionStatus.RepositoryNotFound
             };
         }
 
+        _logger.LogDebug("Found repository at '{RepoPath}'", repoPath);
+
         using var repo = new Repository(repoPath);
+
+        _logger.LogDebug("Looking up base commit '{BaseCommitRef}'", baseCommitRef);
         var baseCommit = repo.Lookup<Commit>(baseCommitRef);
         if (baseCommit is null)
         {
+            _logger.LogError("Base commit '{BaseCommitRef}' not found in repository", baseCommitRef);
             return new ProjectDiffResult
             {
                 Status = ProjectDiffExecutionStatus.BaseCommitNotFound,
@@ -63,10 +58,12 @@ public class ProjectDiffExecutor
         Commit? headCommit;
         if (headCommitRef is not null)
         {
+            _logger.LogDebug("Looking up head commit '{HeadCommitRef}'", headCommitRef);
             headCommit = repo.Lookup<Commit>(headCommitRef);
 
             if (headCommit is null)
             {
+                _logger.LogError("Head commit '{HeadCommitRef}' not found in repository", headCommitRef);
                 return new ProjectDiffResult
                 {
                     Status = ProjectDiffExecutionStatus.HeadCommitNotFound
@@ -75,29 +72,56 @@ public class ProjectDiffExecutor
         }
         else
         {
+            _logger.LogDebug("No head commit specified, using working directory state");
             headCommit = null;
         }
 
         if (_options.FindMergeBase)
         {
+            _logger.LogDebug(
+                "Finding merge base between base commit '{BaseCommitRef}' and head commit '{HeadCommitRef}'",
+                baseCommitRef,
+                headCommitRef
+            );
             var mergeBaseCommit = repo.ObjectDatabase.FindMergeBase(baseCommit, headCommit ?? repo.Head.Tip);
             if (mergeBaseCommit is null)
             {
+                _logger.LogError(
+                    "Could not find merge base between base commit '{BaseCommitRef}' and head commit '{HeadCommitRef}'",
+                    baseCommitRef,
+                    headCommitRef
+                );
                 return new ProjectDiffResult
                 {
                     Status = ProjectDiffExecutionStatus.MergeBaseNotFound
                 };
             }
 
+            _logger.LogDebug(
+                "Found merge base commit '{MergeBaseCommit}'",
+                mergeBaseCommit.Sha
+            );
+
             baseCommit = mergeBaseCommit;
         }
 
+        _logger.LogInformation(
+            "Finding changed files between commits '{BaseCommitRef}' and '{HeadCommitRef}'",
+            baseCommitRef,
+            headCommitRef ?? "working directory"
+        );
         var changedFiles = GetGitModifiedFiles(repo, baseCommit, headCommit)
             .Where(ShouldIncludeFile)
             .ToFrozenSet();
 
+
         if (changedFiles.Count == 0)
         {
+            _logger.LogInformation(
+                "No changed files found between commits '{BaseCommitRef}' and '{HeadCommitRef}'",
+                baseCommitRef,
+                headCommitRef ?? "working directory"
+            );
             return new ProjectDiffResult
             {
                 Status = ProjectDiffExecutionStatus.Success,
@@ -106,7 +130,16 @@ public class ProjectDiffExecutor
             };
         }
 
-        var fromGraph = await ProjectGraphFactory.BuildForGitTree(
+
+        _logger.LogInformation("Found {NumChangedFiles} changed files", changedFiles.Count);
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug("Found changed files: {ChangedFiles}", changedFiles);
+        }
+
+        var projectGraphFactory = new ProjectGraphFactory(_loggerFactory);
+
+        var fromGraph = await projectGraphFactory.BuildForGitTree(
             repo,
             baseCommit.Tree,
             entrypointProvider,
@@ -116,14 +149,14 @@ public class ProjectDiffExecutor
         ProjectGraph toGraph;
         if (headCommit is null)
         {
-            toGraph = await ProjectGraphFactory.BuildForWorkingDirectory(
+            toGraph = await projectGraphFactory.BuildForWorkingDirectory(
                 entrypointProvider,
                 cancellationToken
             );
         }
         else
         {
-            toGraph = await ProjectGraphFactory.BuildForGitTree(
+            toGraph = await projectGraphFactory.BuildForGitTree(
                 repo,
                 headCommit.Tree,
                 entrypointProvider,

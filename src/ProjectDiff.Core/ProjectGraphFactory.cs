@@ -5,32 +5,47 @@ using Microsoft.Build.Evaluation.Context;
 using Microsoft.Build.Execution;
 using Microsoft.Build.FileSystem;
 using Microsoft.Build.Graph;
+using Microsoft.Extensions.Logging;
 using ProjectDiff.Core.Entrypoints;
 
 namespace ProjectDiff.Core;
 
-public static class ProjectGraphFactory
+public sealed class ProjectGraphFactory
 {
-    public static async Task<ProjectGraph> BuildForGitTree(
+    private readonly ILoggerFactory _loggerFactory;
+    private readonly ILogger<ProjectGraphFactory> _logger;
+
+    public ProjectGraphFactory(ILoggerFactory loggerFactory)
+    {
+        _loggerFactory = loggerFactory;
+        _logger = loggerFactory.CreateLogger<ProjectGraphFactory>();
+    }
+
+    public async Task<ProjectGraph> BuildForGitTree(
         Repository repository,
         Tree tree,
         IEntrypointProvider entrypointProvider,
         CancellationToken cancellationToken = default
     )
     {
+        _logger.LogInformation("Building project graph for Git tree '{TreeId}'", tree.Sha);
         using var projectCollection = new ProjectCollection();
 
         var fs = new GitTreeFileSystem(
             repository,
             tree,
             projectCollection,
-            []
-        );
-
-        fs.LazyLoadProjects = false;
+            [],
+            _loggerFactory.CreateLogger<GitTreeFileSystem>()
+        )
+        {
+            // Disable eager loading of projects during entrypoint discovery to prevent user accidentally loading projects
+            EagerLoadProjects = false
+        };
         var entrypoints = await entrypointProvider.GetEntrypoints(fs, cancellationToken);
-        fs.LazyLoadProjects = true;
 
+        // Enable eager loading to fix issue with ms build not using the provided file system to load imports
+        fs.EagerLoadProjects = true;
         var graph = new ProjectGraph(
             entrypoints,
             projectCollection,
@@ -51,7 +66,7 @@ public static class ProjectGraphFactory
         return graph;
     }
 
-    public static async Task<ProjectGraph> BuildForWorkingDirectory(
+    public async Task<ProjectGraph> BuildForWorkingDirectory(
         IEntrypointProvider solutionFile,
         CancellationToken cancellationToken = default
     )
