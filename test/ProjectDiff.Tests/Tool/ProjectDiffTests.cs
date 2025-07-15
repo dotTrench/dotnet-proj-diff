@@ -318,6 +318,14 @@ public sealed class ProjectDiffTests
             .UseParameters(format);
     }
 
+    [Fact]
+    public void BuildingCliIsValid()
+    {
+        var console = new TestConsole(Directory.GetCurrentDirectory());   
+        var cli = ProjectDiffTool.BuildCli(console);
+        cli.ThrowIfInvalid();
+    }
+
 
     private static async Task<string> ExecuteAndReadStdout(
         TestRepository repository,
@@ -325,8 +333,9 @@ public sealed class ProjectDiffTests
     )
     {
         var console = new TestConsole(repository.WorkingDirectory);
-        var tool = ProjectDiffTool.Create(console);
-        var exitCode = await tool.InvokeAsync(args.Append("--log-level=Debug").ToArray());
+        
+        var cli = ProjectDiffTool.BuildCli(console);
+        var exitCode = await cli.InvokeAsync(args.Append("--log-level=Debug").ToArray());
         if (exitCode != 0)
         {
             var stderr = console.GetStandardError();

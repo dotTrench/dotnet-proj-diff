@@ -3,6 +3,6 @@ using ProjectDiff.Tool;
 
 MSBuildLocator.RegisterDefaults();
 
-var tool = ProjectDiffTool.Create(new SystemConsole());
+var tool = ProjectDiffTool.BuildCli(new SystemConsole());
 
 return await tool.InvokeAsync(args);
