@@ -36,5 +36,4 @@ jobs:
         run: dotnet pack --configuration Release -o /tmp/nupkgs -p:IncludeSymbols=true -p:SymbolPackageFormat=snupkg
 
       - name: Push
-        if: startsWith(github.ref, 'refs/tags/v')
         run: dotnet nuget push "/tmp/nupkgs/*.nupkg" --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
