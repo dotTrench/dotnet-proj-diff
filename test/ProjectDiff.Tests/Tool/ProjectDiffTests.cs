@@ -335,7 +335,7 @@ public sealed class ProjectDiffTests
         var console = new TestConsole(repository.WorkingDirectory);
         
         var cli = ProjectDiffTool.BuildCli(console);
-        var exitCode = await cli.InvokeAsync(args.Append("--log-level=Debug").ToArray());
+        var exitCode = await cli.InvokeAsync(args.Append("--log-level=None").ToArray());
         if (exitCode != 0)
         {
             var stderr = console.GetStandardError();
