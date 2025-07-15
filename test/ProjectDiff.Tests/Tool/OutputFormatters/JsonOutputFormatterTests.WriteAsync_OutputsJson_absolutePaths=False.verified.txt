@@ -1,0 +1,13 @@
+﻿[
+  {
+    path: ProjectA,
+    status: Added
+  },
+  {
+    path: ProjectB,
+    status: ReferenceChanged,
+    referencedProjects: [
+      ProjectA
+    ]
+  }
+]

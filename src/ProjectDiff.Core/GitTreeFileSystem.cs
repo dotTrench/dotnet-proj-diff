@@ -236,7 +236,7 @@ public sealed class GitTreeFileSystem : MSBuildFileSystemBase
             throw new NotImplementedException();
         }
 
-        _logger.LogInformation("Loading project from path '{Path}'", path);
+        _logger.LogDebug("Loading project from path '{Path}'", path);
         var relativePath = RelativePath(path);
 
         var entry = _tree[relativePath];

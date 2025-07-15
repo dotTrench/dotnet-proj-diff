@@ -16,5 +16,6 @@ public sealed class ProjectDiffSettings
     public required OutputFormat? Format { get; init; }
     public required FileInfo? Output { get; init; }
     public required FileInfo[] IgnoreChangedFile { get; init; } = [];
+    public string? MicrosoftBuildTraversalVersion { get; init; }
     public LogLevel LogLevel { get; init; } = LogLevel.Information;
 }
