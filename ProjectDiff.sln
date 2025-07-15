@@ -7,6 +7,9 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProjectDiff.Core", "src\ProjectDiff.Core\ProjectDiff.Core.csproj", "{D4372350-2512-42C1-BD51-1C8635F63E1A}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{D1BF8E7B-2C86-4632-BB75-16AC8755C9D1}"
+	ProjectSection(SolutionItems) = preProject
+		src\Directory.Build.props = src\Directory.Build.props
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{3BE889F7-7E1F-4FB0-B257-F85C176A5443}"
 EndProject
