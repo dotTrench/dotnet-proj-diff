@@ -42,7 +42,7 @@ public sealed class TraversalOutputFormatterTests
         var formatter = new TraversalOutputFormatter(traversalVersion, absolutePaths);
 
         // Act
-        await formatter.WriteAsync(projects, output);
+        await formatter.WriteAsync(projects, output, TestContext.Current.CancellationToken);
 
 
         await VerifyXml(console.GetStandardOutput())

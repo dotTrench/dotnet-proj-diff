@@ -1,5 +1,4 @@
-﻿using System.Collections.Frozen;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using Microsoft.Build.Execution;
 using Microsoft.Build.Graph;
 using Microsoft.Build.Prediction;
@@ -17,7 +16,7 @@ public static class BuildGraphFactory
 
     public static BuildGraph CreateForProjectGraph(
         ProjectGraph graph,
-        FrozenSet<string> changedFiles
+        IReadOnlyCollection<string> changedFiles
     )
     {
         var executor = new ProjectGraphPredictionExecutor(
@@ -36,9 +35,9 @@ public static class BuildGraphFactory
     {
         private readonly ProjectGraph _projectGraph;
         private readonly Dictionary<string, BuildGraphProjectCollector> _collectors;
-        private readonly FrozenSet<string> _changedFiles;
+        private readonly IReadOnlyCollection<string> _changedFiles;
 
-        public BuildGraphPredictionCollector(ProjectGraph projectGraph, FrozenSet<string> changedFiles)
+        public BuildGraphPredictionCollector(ProjectGraph projectGraph, IReadOnlyCollection<string> changedFiles)
         {
             _projectGraph = projectGraph;
             _changedFiles = changedFiles;

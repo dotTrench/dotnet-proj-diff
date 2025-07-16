@@ -123,12 +123,9 @@ public sealed class ProjectDiffCommand : RootCommand
         Description = "Set the log level for the command",
     };
 
-    private static readonly Option<string?> MicrosoftBuildTraversalVersionOption = new(
-        "--microsoft-build-traversal-version",
-        "microsoft-build-traversal-version"
-    )
+    private static readonly Option<string?> MicrosoftBuildTraversalVersionOption = new("--msbuild-traversal-version")
     {
-        Description = "Set the version of Microsoft.Build.Traversal when generating traversal projects to use",
+        Description = "Set the version of the Microsoft.Build.Traversal SDK when using traversal output format",
         DefaultValueFactory = _ => null,
     };
 
@@ -249,7 +246,8 @@ public sealed class ProjectDiffCommand : RootCommand
             return 1;
         }
 
-        var projects = result.Projects.Where(ShouldInclude)
+        var projects = result.Projects
+            .Where(ShouldInclude)
             .OrderBy(it => it.ReferencedProjects.Count)
             .ThenBy(it => it.Path)
             .ToList();

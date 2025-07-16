@@ -1,5 +1,4 @@
-﻿using System.Collections.Frozen;
-using LibGit2Sharp;
+﻿using LibGit2Sharp;
 using Microsoft.Build.Graph;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -22,18 +21,18 @@ public class ProjectDiffExecutor
     }
 
     public async Task<ProjectDiffResult> GetProjectDiff(
-        string path,
+        string repositoryPath,
         IEntrypointProvider entrypointProvider,
         string baseCommitRef = "HEAD",
         string? headCommitRef = null,
         CancellationToken cancellationToken = default
     )
     {
-        _logger.LogDebug("Discovering repository from path '{Path}'", path);
-        var repoPath = Repository.Discover(path);
+        _logger.LogDebug("Discovering repository from path '{Path}'", repositoryPath);
+        var repoPath = Repository.Discover(repositoryPath);
         if (repoPath is null)
         {
-            _logger.LogError("Could not find a Git repository for path '{Path}'", path);
+            _logger.LogError("Could not find a Git repository for path '{Path}'", repositoryPath);
             return new ProjectDiffResult
             {
                 Status = ProjectDiffExecutionStatus.RepositoryNotFound
@@ -112,7 +111,7 @@ public class ProjectDiffExecutor
         );
         var changedFiles = GetGitModifiedFiles(repo, baseCommit, headCommit)
             .Where(ShouldIncludeFile)
-            .ToFrozenSet();
+            .ToList();
 
 
         if (changedFiles.Count == 0)
@@ -139,24 +138,29 @@ public class ProjectDiffExecutor
 
         var projectGraphFactory = new ProjectGraphFactory(_loggerFactory);
 
-        var fromGraph = await projectGraphFactory.BuildForGitTree(
+        var baseGraph = await projectGraphFactory.BuildForGitTree(
             repo,
             baseCommit.Tree,
             entrypointProvider,
             cancellationToken
         );
+        _logger.LogInformation(
+            "Base project graph built with {NumProjects} projects",
+            baseGraph.ProjectNodes.Count
+        );
+        _logger.LogDebug("Base project graph construction metrics: {Metrics}", baseGraph.ConstructionMetrics);
 
-        ProjectGraph toGraph;
+        ProjectGraph headGraph;
         if (headCommit is null)
         {
-            toGraph = await projectGraphFactory.BuildForWorkingDirectory(
+            headGraph = await projectGraphFactory.BuildForWorkingDirectory(
                 entrypointProvider,
                 cancellationToken
             );
         }
         else
         {
-            toGraph = await projectGraphFactory.BuildForGitTree(
+            headGraph = await projectGraphFactory.BuildForGitTree(
                 repo,
                 headCommit.Tree,
                 entrypointProvider,
@@ -164,26 +168,25 @@ public class ProjectDiffExecutor
             );
         }
 
+        _logger.LogInformation(
+            "Head project graph built with {NumProjects} projects",
+            headGraph.ProjectNodes.Count
+        );
+        _logger.LogDebug("Head project graph construction metrics: {Metrics}", headGraph.ConstructionMetrics);
 
-        var toBuildGraph = BuildGraphFactory.CreateForProjectGraph(toGraph, changedFiles);
-        var fromBuildGraph = BuildGraphFactory.CreateForProjectGraph(fromGraph, changedFiles);
+
+        var headBuildGraph = BuildGraphFactory.CreateForProjectGraph(headGraph, changedFiles);
+        var baseBuildGraph = BuildGraphFactory.CreateForProjectGraph(baseGraph, changedFiles);
 
         return new ProjectDiffResult
         {
             Status = ProjectDiffExecutionStatus.Success,
             ChangedFiles = changedFiles,
-            Projects = BuildGraphDiff.Diff(fromBuildGraph, toBuildGraph, changedFiles),
+            Projects = BuildGraphDiff.Diff(baseBuildGraph, headBuildGraph, changedFiles),
         };
 
-        bool ShouldIncludeFile(string file)
-        {
-            if (_options.IgnoreChangedFiles.Length == 0)
-            {
-                return true;
-            }
-
-            return _options.IgnoreChangedFiles.All(it => it.FullName != file);
-        }
+        bool ShouldIncludeFile(string file) =>
+            _options.IgnoreChangedFiles.Length == 0 || _options.IgnoreChangedFiles.All(it => it.FullName != file);
     }
 
 
