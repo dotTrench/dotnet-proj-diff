@@ -14,11 +14,11 @@ Heavily inspired by [dotnet-affected](https://github.com/leonardochaia/dotnet-af
 
 ```shell
 # Install globally
-dotnet tool install --global ProjectDiff.Tool
+dotnet tool install --global dotnet-proj-diff
 
 # Or install locally
 dotnet new tool-manifest # if you don't have one
-dotnet tool install ProjectDiff.Tool
+dotnet tool install dotnet-proj-diff
 ```
 
 ## Usage
@@ -28,7 +28,7 @@ Description:
   Calculate which projects in a solution has changed since a specific commit
 
 Usage:
-  ProjectDiff.Tool [options]
+  dotnet-proj-diff [options]
 
 Options:
   -?, -h, --help                                                     Show help and usage information
@@ -46,7 +46,7 @@ Options:
   -o, --out, --output                                                Output file, if not set stdout will be used
   --ignore-changed-file                                              Ignore changes in specific files. If these files are a part of the build evaluation process they will still be evaluated, however these files will be considered unchanged by the diff process []
   --log-level <Critical|Debug|Error|Information|None|Trace|Warning>  Set the log level for the command [default: Information]
-  --msbuild-traversal-version                                        Set the version of the Microsoft.Build.Traversal SDK when using traversal output format []
+  --msbuild-traversal-version                                        Set the version of the Microsoft.Build.Traversal SDK when using traversal output format
 ```
 
 The cli should have some sensible defaults, so you can run it without any arguments and get a list of projects that have

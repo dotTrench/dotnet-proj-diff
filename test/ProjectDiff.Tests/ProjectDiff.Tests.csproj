@@ -26,7 +26,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\src\ProjectDiff.Tool\ProjectDiff.Tool.csproj" />
+        <ProjectReference Include="..\..\src\dotnet-proj-diff\dotnet-proj-diff.csproj" />
     </ItemGroup>
 
 </Project>

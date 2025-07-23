@@ -126,7 +126,6 @@ public sealed class ProjectDiffCommand : RootCommand
     private static readonly Option<string?> MicrosoftBuildTraversalVersionOption = new("--msbuild-traversal-version")
     {
         Description = "Set the version of the Microsoft.Build.Traversal SDK when using traversal output format",
-        DefaultValueFactory = _ => null,
     };
 
     private readonly IConsole _console;
