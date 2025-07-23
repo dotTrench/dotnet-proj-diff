@@ -1,6 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProjectDiff.Tool", "src\ProjectDiff.Tool\ProjectDiff.Tool.csproj", "{9DE43AFB-87B2-4974-B1D8-1BC9E847768E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "dotnet-proj-diff", "src\dotnet-proj-diff\dotnet-proj-diff.csproj", "{9DE43AFB-87B2-4974-B1D8-1BC9E847768E}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProjectDiff.Tests", "test\ProjectDiff.Tests\ProjectDiff.Tests.csproj", "{6BB27096-AC3E-4158-A1A5-19D34EB1822E}"
 EndProject

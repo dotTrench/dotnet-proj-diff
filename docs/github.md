@@ -24,7 +24,7 @@ jobs:
           dotnet-version: 9.x
 
       - name: Install dotnet-proj-diff
-        run: dotnet tool install --global ProjectDiff.Tool
+        run: dotnet tool install --global dotnet-proj-diff
 
       - name: Run dotnet-proj-diff
         run: dotnet-proj-diff <YOUR_SOLUTION_FILE> ${{ github.target_ref }} --output /tmp/diff.slnf
@@ -61,7 +61,7 @@ jobs:
             dotnet-version: 9.x
         
         - name: Install dotnet-proj-diff
-          run: dotnet tool install --global ProjectDiff.Tool
+          run: dotnet tool install --global dotnet-proj-diff
 
         # We need to figure out which commit to use for the diff. We'll hijack nx-set-shas to get the commit SHA of the last successful run of this workflow
         - name: Derive appropriate SHAs for base and head for `nx affected` commands

@@ -3,5 +3,5 @@
 set -e
 
 dotnet pack
-dotnet tool uninstall --global ProjectDiff.Tool
-dotnet tool install --global --source src/ProjectDiff.Tool/bin/Release ProjectDiff.Tool --prerelease
+dotnet tool uninstall --global dotnet-proj-diff
+dotnet tool install --global --source src/dotnet-proj-diff/bin/Release dotnet-proj-diff --prerelease
