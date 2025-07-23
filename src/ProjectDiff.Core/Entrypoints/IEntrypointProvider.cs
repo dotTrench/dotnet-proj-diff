@@ -5,5 +5,9 @@ namespace ProjectDiff.Core.Entrypoints;
 
 public interface IEntrypointProvider
 {
-    Task<IEnumerable<ProjectGraphEntryPoint>> GetEntrypoints(MSBuildFileSystemBase fs, CancellationToken cancellationToken);
+    Task<IEnumerable<ProjectGraphEntryPoint>> GetEntrypoints(
+        string repositoryWorkingDirectory,
+        MSBuildFileSystemBase fs,
+        CancellationToken cancellationToken
+    );
 }

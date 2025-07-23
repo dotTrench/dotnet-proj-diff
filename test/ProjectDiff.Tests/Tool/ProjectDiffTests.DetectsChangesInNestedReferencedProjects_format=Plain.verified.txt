@@ -1,3 +1,0 @@
-﻿Sample/Sample.csproj
-Application/Application.csproj
-Tests/Tests.csproj

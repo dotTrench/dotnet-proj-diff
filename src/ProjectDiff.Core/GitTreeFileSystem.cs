@@ -143,12 +143,12 @@ public sealed class GitTreeFileSystem : MSBuildFileSystemBase
 
     public override FileAttributes GetAttributes(string path)
     {
-        throw new NotSupportedException("GetAttributes");
+        throw new NotSupportedException(nameof(GetAttributes));
     }
 
     public override DateTime GetLastWriteTimeUtc(string path)
     {
-        throw new NotSupportedException("GetLastWriteTimeUtc");
+        throw new NotSupportedException(nameof(GetLastWriteTimeUtc));
     }
 
     public override bool DirectoryExists(string path)

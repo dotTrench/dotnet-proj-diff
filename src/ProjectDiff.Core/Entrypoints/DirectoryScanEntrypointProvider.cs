@@ -6,22 +6,21 @@ namespace ProjectDiff.Core.Entrypoints;
 
 public sealed class DirectoryScanEntrypointProvider : IEntrypointProvider
 {
-    private readonly string _directory;
     private readonly ILogger<DirectoryScanEntrypointProvider> _logger;
 
-    public DirectoryScanEntrypointProvider(string directory, ILogger<DirectoryScanEntrypointProvider> logger)
+    public DirectoryScanEntrypointProvider(ILogger<DirectoryScanEntrypointProvider> logger)
     {
-        _directory = directory;
         _logger = logger;
     }
 
     public Task<IEnumerable<ProjectGraphEntryPoint>> GetEntrypoints(
+        string repositoryWorkingDirectory,
         MSBuildFileSystemBase fs,
         CancellationToken cancellationToken
     )
     {
-        _logger.LogDebug("Scanning directory '{Directory}' for project files", _directory);
-        var entrypoints = fs.EnumerateFiles(_directory, "*.csproj", SearchOption.AllDirectories)
+        _logger.LogDebug("Scanning directory '{Directory}' for project files", repositoryWorkingDirectory);
+        var entrypoints = fs.EnumerateFiles(repositoryWorkingDirectory, "*.csproj", SearchOption.AllDirectories)
             .Select(it => new ProjectGraphEntryPoint(it));
 
 

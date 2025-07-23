@@ -30,10 +30,7 @@ public sealed class MultiFrameworkTests
         );
         var result = await executor.GetProjectDiff(
             repo.WorkingDirectory,
-            new DirectoryScanEntrypointProvider(
-                repo.WorkingDirectory,
-                NullLogger<DirectoryScanEntrypointProvider>.Instance
-            ),
+            new DirectoryScanEntrypointProvider(NullLogger<DirectoryScanEntrypointProvider>.Instance),
             cancellationToken: TestContext.Current.CancellationToken
         );
 

@@ -29,10 +29,7 @@ public sealed class IgnoreChangesTests
         );
         var diff = await executor.GetProjectDiff(
             repo.WorkingDirectory,
-            new DirectoryScanEntrypointProvider(
-                repo.WorkingDirectory,
-                NullLogger<DirectoryScanEntrypointProvider>.Instance
-            ),
+            new DirectoryScanEntrypointProvider(NullLogger<DirectoryScanEntrypointProvider>.Instance),
             cancellationToken: TestContext.Current.CancellationToken
         );
         Assert.Equal(ProjectDiffExecutionStatus.Success, diff.Status);
@@ -65,10 +62,7 @@ public sealed class IgnoreChangesTests
 
         var diff = await executor.GetProjectDiff(
             repo.WorkingDirectory,
-            new DirectoryScanEntrypointProvider(
-                repo.WorkingDirectory,
-                NullLogger<DirectoryScanEntrypointProvider>.Instance
-            ),
+            new DirectoryScanEntrypointProvider(NullLogger<DirectoryScanEntrypointProvider>.Instance),
             cancellationToken: TestContext.Current.CancellationToken
         );
         Assert.Equal(ProjectDiffExecutionStatus.Success, diff.Status);
@@ -102,10 +96,7 @@ public sealed class IgnoreChangesTests
         );
         var diff = await executor.GetProjectDiff(
             repo.WorkingDirectory,
-            new DirectoryScanEntrypointProvider(
-                repo.WorkingDirectory,
-                NullLogger<DirectoryScanEntrypointProvider>.Instance
-            ),
+            new DirectoryScanEntrypointProvider(NullLogger<DirectoryScanEntrypointProvider>.Instance),
             cancellationToken: TestContext.Current.CancellationToken
         );
         Assert.Equal(ProjectDiffExecutionStatus.Success, diff.Status);
