@@ -28,14 +28,12 @@ Description:
   Calculate which projects in a solution has changed since a specific commit
 
 Usage:
-  ProjectDiff.Tool [<solution>] [options]
-
-Arguments:
-  <solution>  Path to solution file to derive projects from
+  ProjectDiff.Tool [options]
 
 Options:
   -?, -h, --help                                                     Show help and usage information
   --version                                                          Show version information
+  --solution                                                         Path to solution file to derive projects from
   --base, --base-ref (REQUIRED)                                      Base git reference to compare against, if not specified 'HEAD' will be used [default: HEAD]
   --head, --head-ref                                                 Head git reference to compare against. If not specified current working tree will be used
   --merge-base                                                       If true instead of using --base use the merge base of --base and --head as the --base reference, if --head is not specified 'HEAD' will be used [default: True]
@@ -47,7 +45,8 @@ Options:
   -f, --format <Json|Plain|Slnf|Traversal>                           Output format, if --output is specified format will be derived from file extension. Otherwise this defaults to 'plain'
   -o, --out, --output                                                Output file, if not set stdout will be used
   --ignore-changed-file                                              Ignore changes in specific files. If these files are a part of the build evaluation process they will still be evaluated, however these files will be considered unchanged by the diff process []
-  --log-level <Critical|Debug|Error|Information|None|Trace|Warning>  Set the log level for the command. [default: Information]
+  --log-level <Critical|Debug|Error|Information|None|Trace|Warning>  Set the log level for the command [default: Information]
+  --msbuild-traversal-version                                        Set the version of the Microsoft.Build.Traversal SDK when using traversal output format []
 ```
 
 The cli should have some sensible defaults, so you can run it without any arguments and get a list of projects that have

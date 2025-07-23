@@ -154,6 +154,7 @@ public class ProjectDiffExecutor
         if (headCommit is null)
         {
             headGraph = await projectGraphFactory.BuildForWorkingDirectory(
+                repo,
                 entrypointProvider,
                 cancellationToken
             );

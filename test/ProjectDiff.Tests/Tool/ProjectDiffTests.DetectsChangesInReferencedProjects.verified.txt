@@ -1,0 +1,13 @@
+﻿[
+  {
+    path: Sample/Sample.csproj,
+    status: Modified
+  },
+  {
+    path: Tests/Tests.csproj,
+    status: ReferenceChanged,
+    referencedProjects: [
+      Sample/Sample.csproj
+    ]
+  }
+]

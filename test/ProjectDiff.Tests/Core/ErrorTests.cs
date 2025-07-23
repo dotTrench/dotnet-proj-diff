@@ -69,6 +69,7 @@ public sealed class ErrorTests
     private sealed class EmptyEntrypointProvider : IEntrypointProvider
     {
         public Task<IEnumerable<ProjectGraphEntryPoint>> GetEntrypoints(
+            string repositoryWorkingDirectory,
             MSBuildFileSystemBase fs,
             CancellationToken cancellationToken
         )

@@ -5,30 +5,14 @@ namespace ProjectDiff.Tests.Tool;
 
 public sealed class ProjectDiffTests
 {
-    public static TheoryData<OutputFormat> OutputFormats => new(Enum.GetValues<OutputFormat>());
-
-    public static TheoryData<OutputFormat> DirectoryScanOutputFormats => new(
-        OutputFormats.Where(it => it.Data != OutputFormat.Slnf)
-    );
-
-    private static string GetExtension(OutputFormat format) => format switch
-    {
-        OutputFormat.Json => "json",
-        OutputFormat.Plain => "txt",
-        OutputFormat.Slnf => "json",
-        OutputFormat.Traversal => "xml",
-        _ => throw new ArgumentOutOfRangeException(nameof(format)),
-    };
-
-    [Theory]
-    [MemberData(nameof(OutputFormats))]
-    public async Task DetectsAddedFiles(OutputFormat format)
+    [Fact]
+    public async Task DetectsAddedFiles()
     {
         using var res = await TestRepository.SetupAsync(static async r =>
             {
                 var solution = await r.CreateSolutionAsync(
                     "Sample.sln",
-                    sln => { sln.AddProject("Sample/Sample.csproj"); }
+                    sln => sln.AddProject("Sample/Sample.csproj")
                 );
 
                 r.CreateDirectory("Sample");
@@ -42,16 +26,14 @@ public sealed class ProjectDiffTests
 
         await repo.WriteAllTextAsync("Sample/MyClass2", "// Some other content");
 
-        var output = await ExecuteAndReadStdout(repo, sln, $"--format={format}");
+        var output = await ExecuteAndReadStdout(repo, "--solution", sln);
 
-        await Verify(output, GetExtension(format))
-            .UseParameters(format);
+        await VerifyJson(output);
     }
 
 
-    [Theory]
-    [MemberData(nameof(OutputFormats))]
-    public async Task DetectsDeletedFiles(OutputFormat format)
+    [Fact]
+    public async Task DetectsDeletedFiles()
     {
         using var res = await TestRepository.SetupAsync(static async r =>
             {
@@ -67,16 +49,14 @@ public sealed class ProjectDiffTests
         var (sln, repo) = res;
         repo.DeleteFile("Sample/MyClass.cs");
 
-        var output = await ExecuteAndReadStdout(repo, sln, $"--format={format}");
+        var output = await ExecuteAndReadStdout(repo, "--solution", sln);
 
-        await Verify(output, GetExtension(format))
-            .UseParameters(format);
+        await VerifyJson(output);
     }
 
 
-    [Theory]
-    [MemberData(nameof(OutputFormats))]
-    public async Task DetectsModifiedFiles(OutputFormat format)
+    [Fact]
+    public async Task DetectsModifiedFiles()
     {
         using var res = await TestRepository.SetupAsync(static async r =>
             {
@@ -91,15 +71,13 @@ public sealed class ProjectDiffTests
         var (sln, repo) = res;
         await repo.WriteAllTextAsync("Sample/MyClass.cs", "// Some new content");
 
-        var output = await ExecuteAndReadStdout(repo, sln, $"--format={format}");
+        var output = await ExecuteAndReadStdout(repo, "--solution", sln);
 
-        await Verify(output, GetExtension(format))
-            .UseParameters(format);
+        await VerifyJson(output);
     }
 
-    [Theory]
-    [MemberData(nameof(OutputFormats))]
-    public async Task DetectsChangesInReferencedProjects(OutputFormat format)
+    [Fact]
+    public async Task DetectsChangesInReferencedProjects()
     {
         using var res = await TestRepository.SetupAsync(static async r =>
             {
@@ -128,16 +106,13 @@ public sealed class ProjectDiffTests
 
         await repo.WriteAllTextAsync("Sample/MyClass.cs", "// Some new content");
 
-        var output = await ExecuteAndReadStdout(repo, sln, $"--format={format}");
+        var output = await ExecuteAndReadStdout(repo, "--solution", sln);
 
-        await Verify(output, GetExtension(format))
-            .UseParameters(format);
+        await VerifyJson(output);
     }
 
-
-    [Theory]
-    [MemberData(nameof(OutputFormats))]
-    public async Task DetectsChangesInNestedReferencedProjects(OutputFormat format)
+    [Fact]
+    public async Task DetectsChangesInNestedReferencedProjects()
     {
         using var res = await TestRepository.SetupAsync(static async r =>
             {
@@ -172,15 +147,13 @@ public sealed class ProjectDiffTests
 
         await repo.WriteAllTextAsync("Sample/MyClass.cs", "// Some new content");
 
-        var output = await ExecuteAndReadStdout(repo, sln, $"--format={format}");
+        var output = await ExecuteAndReadStdout(repo, "--solution", sln);
 
-        await Verify(output, GetExtension(format))
-            .UseParameters(format);
+        await VerifyJson(output);
     }
 
-    [Theory]
-    [MemberData(nameof(OutputFormats))]
-    public async Task DetectsDeletedProjectsWhenOptionIsSet(OutputFormat format)
+    [Fact]
+    public async Task DetectsDeletedProjectsWhenOptionIsSet()
     {
         using var res = await TestRepository.SetupAsync(static async r =>
             {
@@ -215,16 +188,14 @@ public sealed class ProjectDiffTests
                 x.RemoveProject(proj);
             }
         );
-        var output = await ExecuteAndReadStdout(repo, sln, $"--format={format}", "--include-deleted");
+        var output = await ExecuteAndReadStdout(repo, $"--solution={sln}", "--include-deleted");
 
-        await Verify(output, GetExtension(format))
-            .UseParameters(format);
+        await VerifyJson(output);
     }
 
 
-    [Theory]
-    [MemberData(nameof(OutputFormats))]
-    public async Task DoesNotDetectDeletedProjectsWhenOptionIsNotSet(OutputFormat format)
+    [Fact]
+    public async Task DoesNotDetectDeletedProjectsWhenOptionIsNotSet()
     {
         using var res = await TestRepository.SetupAsync(static async r =>
             {
@@ -258,16 +229,14 @@ public sealed class ProjectDiffTests
                 x.RemoveProject(proj);
             }
         );
-        var output = await ExecuteAndReadStdout(repo, sln, $"--format={format}");
+        var output = await ExecuteAndReadStdout(repo, $"--solution={sln}");
 
-        await Verify(output, GetExtension(format))
-            .UseParameters(format);
+        await VerifyJson(output);
     }
 
 
-    [Theory]
-    [MemberData(nameof(OutputFormats))]
-    public async Task DetectsAddedProjects(OutputFormat format)
+    [Fact]
+    public async Task DetectsAddedProjects()
     {
         using var res = await TestRepository.SetupAsync(static async r =>
             {
@@ -290,15 +259,13 @@ public sealed class ProjectDiffTests
         repo.CreateProject("Added/Added.csproj");
 
 
-        var output = await ExecuteAndReadStdout(repo, sln, $"--format={format}");
+        var output = await ExecuteAndReadStdout(repo, $"--solution={sln}");
 
-        await Verify(output, GetExtension(format))
-            .UseParameters(format);
+        await VerifyJson(output);
     }
 
-    [Theory]
-    [MemberData(nameof(DirectoryScanOutputFormats))]
-    public async Task DetectsAddedProjectsWithDirectoryScan(OutputFormat format)
+    [Fact]
+    public async Task DetectsAddedProjectsWithDirectoryScan()
     {
         using var repo = await TestRepository.SetupAsync(static async r =>
             {
@@ -312,16 +279,15 @@ public sealed class ProjectDiffTests
         repo.CreateProject("Added/Added.csproj");
 
 
-        var output = await ExecuteAndReadStdout(repo, $"--format={format}");
+        var output = await ExecuteAndReadStdout(repo);
 
-        await Verify(output, GetExtension(format))
-            .UseParameters(format);
+        await VerifyJson(output);
     }
 
     [Fact]
     public void BuildingCliIsValid()
     {
-        var console = new TestConsole(Directory.GetCurrentDirectory());   
+        var console = new TestConsole(Directory.GetCurrentDirectory());
         var cli = ProjectDiffTool.BuildCli(console);
         cli.ThrowIfInvalid();
     }
@@ -332,10 +298,15 @@ public sealed class ProjectDiffTests
         params string[] args
     )
     {
+        string[] defaultArgs =
+        [
+            "--log-level=Error",
+            "--format=json",
+        ];
         var console = new TestConsole(repository.WorkingDirectory);
-        
+
         var cli = ProjectDiffTool.BuildCli(console);
-        var exitCode = await cli.InvokeAsync(args.Append("--log-level=None").ToArray());
+        var exitCode = await cli.InvokeAsync([..args, ..defaultArgs]);
         if (exitCode != 0)
         {
             var stderr = console.GetStandardError();

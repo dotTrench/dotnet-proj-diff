@@ -17,10 +17,17 @@ public sealed class SolutionEntrypointProvider : IEntrypointProvider
     }
 
     public async Task<IEnumerable<ProjectGraphEntryPoint>> GetEntrypoints(
+        string repositoryWorkingDirectory,
         MSBuildFileSystemBase fs,
         CancellationToken cancellationToken
     )
     {
+        if (!fs.FileExists(_solution.FullName))
+        {
+            _logger.LogError("Could not find the solution file {SolutionFile} in the file system", _solution.FullName);
+            throw new FileNotFoundException("Could not find the solution file in the file system", _solution.FullName);
+        }
+
         await using var stream = fs.GetFileStream(
             _solution.FullName,
             FileMode.Open,

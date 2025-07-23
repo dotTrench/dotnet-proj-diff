@@ -19,7 +19,7 @@ public sealed class ProjectDiffCommand : RootCommand
             }
         };
 
-    private static readonly Argument<FileInfo> SolutionArgument = new("solution")
+    private static readonly Option<FileInfo> SolutionOption = new("--solution")
     {
         Arity = ArgumentArity.ZeroOrOne,
         Description = "Path to solution file to derive projects from",
@@ -136,7 +136,7 @@ public sealed class ProjectDiffCommand : RootCommand
     {
         _console = console;
         Description = "Calculate which projects in a solution has changed since a specific commit";
-        Arguments.Add(SolutionArgument);
+        Options.Add(SolutionOption);
         Options.Add(BaseCommitOption);
         Options.Add(HeadCommitOption);
         Options.Add(MergeBaseOption);
@@ -159,7 +159,7 @@ public sealed class ProjectDiffCommand : RootCommand
         {
             Format = parseResult.GetValue(Format),
             Output = parseResult.GetValue(OutputOption),
-            Solution = parseResult.GetValue(SolutionArgument),
+            Solution = parseResult.GetValue(SolutionOption),
             BaseRef = parseResult.GetRequiredValue(BaseCommitOption),
             HeadRef = parseResult.GetValue(HeadCommitOption),
             MergeBase = parseResult.GetValue(MergeBaseOption),
@@ -207,7 +207,7 @@ public sealed class ProjectDiffCommand : RootCommand
 
         if (outputFormat == OutputFormat.Slnf && settings.Solution is null)
         {
-            logger.LogError("Cannot output as slnf format without solution file specified.");
+            logger.LogError("Cannot output as slnf format without {SolutionOption} specified.", SolutionOption.Name);
             return 1;
         }
 
@@ -228,7 +228,6 @@ public sealed class ProjectDiffCommand : RootCommand
                 loggerFactory.CreateLogger<SolutionEntrypointProvider>()
             )
             : new DirectoryScanEntrypointProvider(
-                _console.WorkingDirectory,
                 loggerFactory.CreateLogger<DirectoryScanEntrypointProvider>()
             );
 
