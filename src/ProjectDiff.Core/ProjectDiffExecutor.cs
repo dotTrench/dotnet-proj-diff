@@ -1,4 +1,4 @@
-﻿using LibGit2Sharp;
+using LibGit2Sharp;
 using Microsoft.Build.Graph;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;

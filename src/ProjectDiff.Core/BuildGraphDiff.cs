@@ -1,4 +1,4 @@
-﻿using System.Collections.Frozen;
+using System.Collections.Frozen;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -60,7 +60,7 @@ public static class BuildGraphDiff
                 }
                 else if (HasProjectReferencesChanged(previousProject, currentProject, modifiedFiles))
                 {
-                    _logger.LogDebug("Project references have changed, marking as reference changed" );
+                    _logger.LogDebug("Project references have changed, marking as reference changed");
                     yield return new DiffProject
                     {
                         Path = currentProject.FullPath,

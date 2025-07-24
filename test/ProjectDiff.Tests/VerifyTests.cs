@@ -1,4 +1,4 @@
-﻿namespace ProjectDiff.Tests;
+namespace ProjectDiff.Tests;
 
 public sealed class VerifyTests
 {
@@ -7,5 +7,5 @@ public sealed class VerifyTests
     {
         await VerifyChecks.Run();
     }
-    
+
 }

@@ -1,4 +1,4 @@
-﻿using System.CommandLine;
+using System.CommandLine;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
@@ -255,7 +255,7 @@ public sealed class ProjectDiffCommand : RootCommand
             logger.LogDebug(
                 "Diff projects: {Projects}",
                 projects.Select(it => new
-                    { it.Path, it.Status, ReferencedProjects = string.Join(',', it.ReferencedProjects) }
+                { it.Path, it.Status, ReferencedProjects = string.Join(',', it.ReferencedProjects) }
                 )
             );
         }

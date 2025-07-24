@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using LibGit2Sharp;
 using Microsoft.Build.Execution;
 using Microsoft.Build.Graph;

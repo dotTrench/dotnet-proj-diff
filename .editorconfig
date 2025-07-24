@@ -1,4 +1,6 @@
-﻿# Verify settings
+﻿root = true
+
+# Verify settings
 [*.{received,verified}.{json,txt,xml}]
 charset = utf-8
 end_of_line = lf
@@ -7,3 +9,15 @@ indent_style = unset
 insert_final_newline = false
 tab_width = unset
 trim_trailing_whitespace = false
+
+
+[*.cs]
+end_of_line = crlf
+indent_size = 4
+indent_style = space
+insert_final_newline = true
+trim_trailing_whitespace = true
+charset = utf-8
+
+[*.sh]
+end_of_line = lf

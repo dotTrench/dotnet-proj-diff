@@ -1,4 +1,4 @@
-﻿using ProjectDiff.Tests.Utils;
+using ProjectDiff.Tests.Utils;
 using ProjectDiff.Tool;
 
 namespace ProjectDiff.Tests.Tool;
@@ -306,7 +306,7 @@ public sealed class ProjectDiffTests
         var console = new TestConsole(repository.WorkingDirectory);
 
         var cli = ProjectDiffTool.BuildCli(console);
-        var exitCode = await cli.InvokeAsync([..args, ..defaultArgs]);
+        var exitCode = await cli.InvokeAsync([.. args, .. defaultArgs]);
         if (exitCode != 0)
         {
             var stderr = console.GetStandardError();

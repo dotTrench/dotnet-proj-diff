@@ -20,7 +20,7 @@ public sealed class MoveFileTests
                     "ProjectB/ProjectB.csproj",
                     p => p.AddItem("ProjectReference", "../ProjectA/ProjectA.csproj")
                 );
-                
+
                 await r.WriteAllTextAsync("ProjectB/FileA.cs", "File A content");
             }
         );
@@ -30,7 +30,7 @@ public sealed class MoveFileTests
             "ProjectA/FileA.cs"
         );
         var projects = await GetDiffProjects(repo);
-        
+
         Assert.Collection(
             projects,
             p =>
@@ -45,7 +45,7 @@ public sealed class MoveFileTests
             }
         );
     }
-    
+
     [Fact]
     public async Task MoveFileFromReferencedProjects()
     {
@@ -68,7 +68,7 @@ public sealed class MoveFileTests
             "ProjectB/FileA.cs"
         );
         var projects = await GetDiffProjects(repo);
-        
+
         Assert.Collection(
             projects,
             p =>

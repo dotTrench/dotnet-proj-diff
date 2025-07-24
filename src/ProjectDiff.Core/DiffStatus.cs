@@ -1,4 +1,4 @@
-﻿namespace ProjectDiff.Core;
+namespace ProjectDiff.Core;
 
 public enum DiffStatus
 {

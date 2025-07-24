@@ -1,4 +1,4 @@
-﻿using Microsoft.Build.FileSystem;
+using Microsoft.Build.FileSystem;
 using Microsoft.Build.Graph;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;

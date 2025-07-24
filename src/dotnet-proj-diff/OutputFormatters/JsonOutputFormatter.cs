@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using ProjectDiff.Core;
 
 namespace ProjectDiff.Tool.OutputFormatters;
@@ -21,18 +21,18 @@ public sealed class JsonOutputFormatter : IOutputFormatter
     )
     {
         projects = projects.Select(project => project with
-            {
-                Path = output.NormalizePath(
+        {
+            Path = output.NormalizePath(
                     project.Path,
                     _absolutePaths
                 ),
-                ReferencedProjects = project.ReferencedProjects
+            ReferencedProjects = project.ReferencedProjects
                     .Select(refProject => output.NormalizePath(
                             refProject,
                             _absolutePaths
                         )
                     ).ToList()
-            }
+        }
         );
 
         await using var stream = output.Open();

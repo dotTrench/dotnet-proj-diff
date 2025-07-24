@@ -1,4 +1,4 @@
-﻿using ProjectDiff.Core;
+using ProjectDiff.Core;
 
 namespace ProjectDiff.Tool.OutputFormatters;
 

@@ -1,4 +1,4 @@
-﻿using ProjectDiff.Core;
+using ProjectDiff.Core;
 
 namespace ProjectDiff.Tests.Core;
 
@@ -203,7 +203,7 @@ public sealed class BuildGraphDiffTests
         Assert.Equal("/path/to/project1.csproj", project.Path);
         Assert.Equal(DiffStatus.Modified, project.Status);
     }
-    
+
     [Fact]
     public void ReturnsProjectWhenInputFileIsRemoved()
     {
@@ -220,7 +220,7 @@ public sealed class BuildGraphDiffTests
         Assert.Equal("/path/to/project1.csproj", project.Path);
         Assert.Equal(DiffStatus.Modified, project.Status);
     }
-    
+
     [Fact]
     public void ReturnsProjectWhenInputFileIsChangedButNotModified()
     {
@@ -237,7 +237,7 @@ public sealed class BuildGraphDiffTests
         Assert.Equal("/path/to/project1.csproj", project.Path);
         Assert.Equal(DiffStatus.Modified, project.Status);
     }
-    
+
     [Fact]
     public void ReturnsProjectWhenReferenceIsChangedButNotModified()
     {

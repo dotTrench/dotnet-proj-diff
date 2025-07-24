@@ -1,4 +1,4 @@
-﻿namespace ProjectDiff.Tests.Utils;
+namespace ProjectDiff.Tests.Utils;
 
 public sealed class SetupResult<T> : IDisposable
 {

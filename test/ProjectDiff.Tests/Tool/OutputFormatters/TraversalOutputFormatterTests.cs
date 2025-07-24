@@ -1,4 +1,4 @@
-﻿using ProjectDiff.Core;
+using ProjectDiff.Core;
 using ProjectDiff.Tests.Utils;
 using ProjectDiff.Tool;
 using ProjectDiff.Tool.OutputFormatters;
