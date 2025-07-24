@@ -1,4 +1,4 @@
-﻿using System.IO.Enumeration;
+using System.IO.Enumeration;
 using System.Xml;
 using LibGit2Sharp;
 using Microsoft.Build.Construction;

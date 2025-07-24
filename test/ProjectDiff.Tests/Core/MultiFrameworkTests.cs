@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging.Abstractions;
 using ProjectDiff.Core;
 using ProjectDiff.Core.Entrypoints;
 using ProjectDiff.Tests.Utils;

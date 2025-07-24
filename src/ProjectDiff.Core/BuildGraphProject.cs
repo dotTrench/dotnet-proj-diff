@@ -1,4 +1,4 @@
-﻿namespace ProjectDiff.Core;
+namespace ProjectDiff.Core;
 
 public sealed class BuildGraphProject
 {
@@ -16,9 +16,4 @@ public sealed class BuildGraphProject
     public string FullPath { get; }
     public IReadOnlyCollection<string> InputFiles { get; }
     public IReadOnlyCollection<string> References { get; }
-
-    public bool Matches(BuildGraphProject other)
-    {
-        return FullPath == other.FullPath;
-    }
 }

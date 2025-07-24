@@ -1,4 +1,4 @@
-﻿using Microsoft.Build.FileSystem;
+using Microsoft.Build.FileSystem;
 using Microsoft.Build.Graph;
 using ProjectDiff.Core;
 using ProjectDiff.Core.Entrypoints;

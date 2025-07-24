@@ -1,4 +1,4 @@
-﻿namespace ProjectDiff.Tool;
+namespace ProjectDiff.Tool;
 
 public sealed class Output(FileInfo? outputFile, IConsole console)
 {

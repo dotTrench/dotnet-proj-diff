@@ -1,4 +1,4 @@
-﻿using LibGit2Sharp;
+using LibGit2Sharp;
 using Microsoft.Build.Graph;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -42,6 +42,10 @@ public class ProjectDiffExecutor
         _logger.LogDebug("Found repository at '{RepoPath}'", repoPath);
 
         using var repo = new Repository(repoPath);
+        if (repo.Info.IsShallow)
+        {
+            _logger.LogWarning("Repository at is shallow, some operations may not work as expected");
+        }
 
         _logger.LogDebug("Looking up base commit '{BaseCommitRef}'", baseCommitRef);
         var baseCommit = repo.Lookup<Commit>(baseCommitRef);
@@ -148,7 +152,6 @@ public class ProjectDiffExecutor
             "Base project graph built with {NumProjects} projects",
             baseGraph.ProjectNodes.Count
         );
-        _logger.LogDebug("Base project graph construction metrics: {Metrics}", baseGraph.ConstructionMetrics);
 
         ProjectGraph headGraph;
         if (headCommit is null)
@@ -173,17 +176,27 @@ public class ProjectDiffExecutor
             "Head project graph built with {NumProjects} projects",
             headGraph.ProjectNodes.Count
         );
-        _logger.LogDebug("Head project graph construction metrics: {Metrics}", headGraph.ConstructionMetrics);
 
 
-        var headBuildGraph = BuildGraphFactory.CreateForProjectGraph(headGraph, changedFiles);
-        var baseBuildGraph = BuildGraphFactory.CreateForProjectGraph(baseGraph, changedFiles);
+        var headBuildGraph = BuildGraphFactory.CreateForProjectGraph(
+            headGraph,
+            repo,
+            _options.IgnoreChangedFiles
+        );
+        var baseBuildGraph = BuildGraphFactory.CreateForProjectGraph(
+            baseGraph,
+            repo,
+            _options.IgnoreChangedFiles
+        );
 
+        var projects = BuildGraphDiff.Diff(baseBuildGraph, headBuildGraph, changedFiles, _loggerFactory)
+            .OrderBy(it => it.ReferencedProjects.Count)
+            .ThenBy(it => it.Name);
         return new ProjectDiffResult
         {
             Status = ProjectDiffExecutionStatus.Success,
             ChangedFiles = changedFiles,
-            Projects = BuildGraphDiff.Diff(baseBuildGraph, headBuildGraph, changedFiles),
+            Projects = projects,
         };
 
         bool ShouldIncludeFile(string file) =>

@@ -1,6 +1,7 @@
-﻿using Microsoft.Build.FileSystem;
+using Microsoft.Build.FileSystem;
 using Microsoft.Build.Graph;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace ProjectDiff.Core.Entrypoints;
 
@@ -8,9 +9,10 @@ public sealed class DirectoryScanEntrypointProvider : IEntrypointProvider
 {
     private readonly ILogger<DirectoryScanEntrypointProvider> _logger;
 
-    public DirectoryScanEntrypointProvider(ILogger<DirectoryScanEntrypointProvider> logger)
+
+    public DirectoryScanEntrypointProvider(ILogger<DirectoryScanEntrypointProvider>? logger = null)
     {
-        _logger = logger;
+        _logger = logger ?? NullLogger<DirectoryScanEntrypointProvider>.Instance;
     }
 
     public Task<IEnumerable<ProjectGraphEntryPoint>> GetEntrypoints(

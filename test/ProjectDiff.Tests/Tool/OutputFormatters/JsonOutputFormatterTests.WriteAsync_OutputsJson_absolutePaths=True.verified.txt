@@ -1,10 +1,12 @@
 ﻿[
   {
     path: {TempPath}ProjectA,
+    name: ProjectA,
     status: Added
   },
   {
     path: {TempPath}ProjectB,
+    name: ProjectB,
     status: ReferenceChanged,
     referencedProjects: [
       {TempPath}ProjectA

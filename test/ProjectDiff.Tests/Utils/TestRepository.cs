@@ -1,4 +1,4 @@
-﻿using LibGit2Sharp;
+using LibGit2Sharp;
 using Microsoft.Build.Construction;
 using Microsoft.VisualStudio.SolutionPersistence.Model;
 using Microsoft.VisualStudio.SolutionPersistence.Serializer;
@@ -65,7 +65,7 @@ public sealed class TestRepository : IDisposable
 
     public string GetPath(params string[] parts)
     {
-        return Path.Join([WorkingDirectory, ..parts]);
+        return Path.Join([WorkingDirectory, .. parts]);
     }
 
     public string GetPath(string relativePath)

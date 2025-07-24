@@ -1,4 +1,4 @@
-﻿namespace ProjectDiff.Tool;
+namespace ProjectDiff.Tool;
 
 public sealed class SystemConsole : IConsole
 {
@@ -6,6 +6,5 @@ public sealed class SystemConsole : IConsole
     public TextWriter Out { get; } = Console.Out;
 
     public Stream OpenStandardOutput() => Console.OpenStandardOutput();
-
     public string WorkingDirectory { get; } = Directory.GetCurrentDirectory();
 }

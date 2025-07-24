@@ -1,4 +1,4 @@
-﻿using System.CommandLine;
+using System.CommandLine;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
@@ -119,7 +119,7 @@ public sealed class ProjectDiffCommand : RootCommand
 
     private static readonly Option<LogLevel> LogLevelOption = new("--log-level")
     {
-        DefaultValueFactory = _ => LogLevel.Information,
+        DefaultValueFactory = _ => LogLevel.Warning,
         Description = "Set the log level for the command",
     };
 
@@ -183,6 +183,7 @@ public sealed class ProjectDiffCommand : RootCommand
         using var loggerFactory = LoggerFactory.Create(x =>
             {
                 x.AddConsole(c => c.LogToStandardErrorThreshold = LogLevel.Trace); // Log everything to stderr
+                x.AddSimpleConsole(x => x.IncludeScopes = true);
                 x.SetMinimumLevel(settings.LogLevel);
             }
         );
@@ -246,8 +247,6 @@ public sealed class ProjectDiffCommand : RootCommand
 
         var projects = result.Projects
             .Where(ShouldInclude)
-            .OrderBy(it => it.ReferencedProjects.Count)
-            .ThenBy(it => it.Path)
             .ToList();
 
         logger.LogInformation("Found {Count} projects in diff", projects.Count);
@@ -256,7 +255,7 @@ public sealed class ProjectDiffCommand : RootCommand
             logger.LogDebug(
                 "Diff projects: {Projects}",
                 projects.Select(it => new
-                    { it.Path, it.Status, ReferencedProjects = string.Join(',', it.ReferencedProjects) }
+                { it.Path, it.Status, ReferencedProjects = string.Join(',', it.ReferencedProjects) }
                 )
             );
         }

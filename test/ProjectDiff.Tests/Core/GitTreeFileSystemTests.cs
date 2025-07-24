@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using Microsoft.Build.Evaluation;
 using Microsoft.Extensions.Logging.Abstractions;
 using ProjectDiff.Core;

@@ -1,4 +1,6 @@
-﻿using System.Collections.Frozen;
+using System.Collections.Frozen;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace ProjectDiff.Core;
 
@@ -7,10 +9,12 @@ public static class BuildGraphDiff
     public static IEnumerable<DiffProject> Diff(
         BuildGraph previous,
         BuildGraph current,
-        IEnumerable<string> modifiedFiles
+        IEnumerable<string> modifiedFiles,
+        ILoggerFactory? loggerFactory = null
     )
     {
-        var instance = new GraphDiffInstance(current);
+        loggerFactory ??= NullLoggerFactory.Instance;
+        var instance = new GraphDiffInstance(current, loggerFactory.CreateLogger<GraphDiffInstance>());
 
         return instance.Execute(previous, modifiedFiles.ToFrozenSet());
     }
@@ -19,20 +23,24 @@ public static class BuildGraphDiff
     {
         private readonly BuildGraph _graph;
         private readonly Dictionary<string, bool> _modifiedProjects;
+        private readonly ILogger<GraphDiffInstance> _logger;
 
-        public GraphDiffInstance(BuildGraph graph)
+        public GraphDiffInstance(BuildGraph graph, ILogger<GraphDiffInstance> logger)
         {
             _modifiedProjects = new Dictionary<string, bool>(graph.Projects.Count);
             _graph = graph;
+            _logger = logger;
         }
 
         public IEnumerable<DiffProject> Execute(BuildGraph previous, FrozenSet<string> modifiedFiles)
         {
             foreach (var currentProject in _graph.Projects)
             {
-                var previousProject = previous.Projects.FirstOrDefault(it => it.Matches(currentProject));
+                using var scope = _logger.BeginScope(currentProject.FullPath);
+                var previousProject = previous.Projects.FirstOrDefault(it => it.FullPath == currentProject.FullPath);
                 if (previousProject is null)
                 {
+                    _logger.LogDebug("Project not found in previous graph, marking as added");
                     yield return new DiffProject
                     {
                         Path = currentProject.FullPath,
@@ -42,6 +50,7 @@ public static class BuildGraphDiff
                 }
                 else if (HasProjectChanged(previousProject, currentProject, modifiedFiles))
                 {
+                    _logger.LogDebug("Project has changed, marking as modified");
                     yield return new DiffProject
                     {
                         Path = currentProject.FullPath,
@@ -51,6 +60,7 @@ public static class BuildGraphDiff
                 }
                 else if (HasProjectReferencesChanged(previousProject, currentProject, modifiedFiles))
                 {
+                    _logger.LogDebug("Project references have changed, marking as reference changed");
                     yield return new DiffProject
                     {
                         Path = currentProject.FullPath,
@@ -62,9 +72,10 @@ public static class BuildGraphDiff
 
             foreach (var previousProject in previous.Projects)
             {
-                var existsInCurrent = _graph.Projects.Any(it => it.Matches(previousProject));
+                var existsInCurrent = _graph.Projects.Any(it => it.FullPath == previousProject.FullPath);
                 if (!existsInCurrent)
                 {
+                    _logger.LogDebug("Project {Path} not found in current graph, marking as removed", previousProject.FullPath);
                     yield return new DiffProject
                     {
                         Path = previousProject.FullPath,
@@ -96,7 +107,7 @@ public static class BuildGraphDiff
             return false;
         }
 
-        private static bool HasProjectInputFilesChanged(
+        private bool HasProjectInputFilesChanged(
             IReadOnlyCollection<string> previous,
             IReadOnlyCollection<string> current,
             FrozenSet<string> modifiedFiles
@@ -104,6 +115,11 @@ public static class BuildGraphDiff
         {
             if (previous.Count != current.Count)
             {
+                _logger.LogDebug(
+                    "Input files count changed: {PreviousCount} -> {CurrentCount}",
+                    previous.Count,
+                    current.Count
+                );
                 return true;
             }
 
@@ -111,11 +127,13 @@ public static class BuildGraphDiff
             {
                 if (!previous.Contains(file))
                 {
+                    _logger.LogInformation("Input file {File} added", file);
                     return true;
                 }
 
                 if (modifiedFiles.Contains(file))
                 {
+                    _logger.LogInformation("Input file {File} modified", file);
                     return true;
                 }
             }
@@ -124,6 +142,7 @@ public static class BuildGraphDiff
             {
                 if (!current.Contains(file))
                 {
+                    _logger.LogInformation("Input file {File} removed", file);
                     return true;
                 }
             }
@@ -140,6 +159,11 @@ public static class BuildGraphDiff
         {
             if (previous.References.Count != current.References.Count)
             {
+                _logger.LogDebug(
+                    "References count changed: {PreviousCount} -> {CurrentCount}",
+                    previous.References.Count,
+                    current.References.Count
+                );
                 return true;
             }
 
@@ -147,6 +171,7 @@ public static class BuildGraphDiff
             {
                 if (!previous.References.Contains(reference))
                 {
+                    _logger.LogInformation("Reference {Reference} added", reference);
                     return true;
                 }
 
@@ -155,6 +180,7 @@ public static class BuildGraphDiff
 
                 if (HasProjectChanged(previousReference, currentReference, modifiedFiles))
                 {
+                    _logger.LogInformation("Referenced project {Reference} modified", reference);
                     return true;
                 }
             }
@@ -163,6 +189,7 @@ public static class BuildGraphDiff
             {
                 if (!current.References.Contains(reference))
                 {
+                    _logger.LogInformation("Referenced project {Reference} removed", reference);
                     return true;
                 }
             }
