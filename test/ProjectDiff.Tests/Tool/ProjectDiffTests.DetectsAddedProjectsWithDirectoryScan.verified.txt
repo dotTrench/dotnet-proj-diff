@@ -1,6 +1,7 @@
 ﻿[
   {
     path: Added/Added.csproj,
+    name: Added,
     status: Added
   }
 ]

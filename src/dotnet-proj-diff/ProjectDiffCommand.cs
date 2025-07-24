@@ -246,8 +246,6 @@ public sealed class ProjectDiffCommand : RootCommand
 
         var projects = result.Projects
             .Where(ShouldInclude)
-            .OrderBy(it => it.ReferencedProjects.Count)
-            .ThenBy(it => it.Path)
             .ToList();
 
         logger.LogInformation("Found {Count} projects in diff", projects.Count);

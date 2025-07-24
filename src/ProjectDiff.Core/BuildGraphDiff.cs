@@ -30,7 +30,7 @@ public static class BuildGraphDiff
         {
             foreach (var currentProject in _graph.Projects)
             {
-                var previousProject = previous.Projects.FirstOrDefault(it => it.Matches(currentProject));
+                var previousProject = previous.Projects.FirstOrDefault(it => it.FullPath == currentProject.FullPath);
                 if (previousProject is null)
                 {
                     yield return new DiffProject
@@ -62,7 +62,7 @@ public static class BuildGraphDiff
 
             foreach (var previousProject in previous.Projects)
             {
-                var existsInCurrent = _graph.Projects.Any(it => it.Matches(previousProject));
+                var existsInCurrent = _graph.Projects.Any(it => it.FullPath == previousProject.FullPath);
                 if (!existsInCurrent)
                 {
                     yield return new DiffProject

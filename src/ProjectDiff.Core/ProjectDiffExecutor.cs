@@ -176,14 +176,17 @@ public class ProjectDiffExecutor
         _logger.LogDebug("Head project graph construction metrics: {Metrics}", headGraph.ConstructionMetrics);
 
 
-        var headBuildGraph = BuildGraphFactory.CreateForProjectGraph(headGraph, changedFiles);
-        var baseBuildGraph = BuildGraphFactory.CreateForProjectGraph(baseGraph, changedFiles);
+        var headBuildGraph = BuildGraphFactory.CreateForProjectGraph(headGraph, repo, _options.IgnoreChangedFiles);
+        var baseBuildGraph = BuildGraphFactory.CreateForProjectGraph(baseGraph, repo, _options.IgnoreChangedFiles);
 
+        var projects = BuildGraphDiff.Diff(baseBuildGraph, headBuildGraph, changedFiles)
+            .OrderBy(it => it.ReferencedProjects.Count)
+            .ThenBy(it => it.Name);
         return new ProjectDiffResult
         {
             Status = ProjectDiffExecutionStatus.Success,
             ChangedFiles = changedFiles,
-            Projects = BuildGraphDiff.Diff(baseBuildGraph, headBuildGraph, changedFiles),
+            Projects = projects,
         };
 
         bool ShouldIncludeFile(string file) =>
@@ -205,6 +208,10 @@ public class ProjectDiffExecutor
             : repository.Diff.Compare<TreeChanges>(baseCommit.Tree, headCommit.Tree);
         foreach (var change in changes)
         {
+            // if (change.Path != change.OldPath)
+            // {
+            //     yield return Path.GetFullPath(change.OldPath, repository.Info.WorkingDirectory);
+            // }
             yield return Path.GetFullPath(change.Path, repository.Info.WorkingDirectory);
         }
     }

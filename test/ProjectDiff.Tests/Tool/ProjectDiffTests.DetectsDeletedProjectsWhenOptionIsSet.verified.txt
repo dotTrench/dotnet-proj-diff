@@ -1,6 +1,7 @@
 ﻿[
   {
     path: Tests/Tests.csproj,
+    name: Tests,
     status: Removed
   }
 ]

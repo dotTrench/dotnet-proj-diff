@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using LibGit2Sharp;
 using Microsoft.Build.Execution;
 using Microsoft.Build.Graph;
 using Microsoft.Build.Prediction;
@@ -16,7 +17,8 @@ public static class BuildGraphFactory
 
     public static BuildGraph CreateForProjectGraph(
         ProjectGraph graph,
-        IReadOnlyCollection<string> changedFiles
+        Repository repository,
+        IReadOnlyCollection<FileInfo> ignoredFiles
     )
     {
         var executor = new ProjectGraphPredictionExecutor(
@@ -24,7 +26,7 @@ public static class BuildGraphFactory
             ProjectPredictors.AllProjectPredictors
         );
 
-        var collector = new BuildGraphPredictionCollector(graph, changedFiles);
+        var collector = new BuildGraphPredictionCollector(graph, repository, ignoredFiles);
 
         executor.PredictInputsAndOutputs(graph, collector);
 
@@ -34,13 +36,19 @@ public static class BuildGraphFactory
     private sealed class BuildGraphPredictionCollector : IProjectPredictionCollector
     {
         private readonly ProjectGraph _projectGraph;
+        private readonly Repository _repository;
+        private readonly IReadOnlyCollection<FileInfo> _ignoredFiles;
         private readonly Dictionary<string, BuildGraphProjectCollector> _collectors;
-        private readonly IReadOnlyCollection<string> _changedFiles;
 
-        public BuildGraphPredictionCollector(ProjectGraph projectGraph, IReadOnlyCollection<string> changedFiles)
+        public BuildGraphPredictionCollector(
+            ProjectGraph projectGraph,
+            Repository repository,
+            IReadOnlyCollection<FileInfo> ignoredFiles
+        )
         {
             _projectGraph = projectGraph;
-            _changedFiles = changedFiles;
+            _repository = repository;
+            _ignoredFiles = ignoredFiles;
             _collectors = new Dictionary<string, BuildGraphProjectCollector>(_projectGraph.ProjectNodes.Count);
             foreach (var node in _projectGraph.ProjectNodes)
             {
@@ -51,6 +59,7 @@ public static class BuildGraphFactory
             }
         }
 
+
         public void AddInputFile(string path, ProjectInstance projectInstance, string predictorName)
         {
             if (!Path.IsPathRooted(path))
@@ -58,10 +67,18 @@ public static class BuildGraphFactory
                 path = Path.GetFullPath(path, projectInstance.Directory);
             }
 
-            if (!_changedFiles.Contains(path))
+            // Only include files that are part of this repository
+            if (!path.StartsWith(_repository.Info.WorkingDirectory))
             {
                 return;
             }
+
+            // Ignore files that are in the ignored files list
+            if (_ignoredFiles.Count > 0 && _ignoredFiles.Any(it => it.FullName == path))
+            {
+                return;
+            }
+
 
             if (!_collectors.TryGetValue(projectInstance.FullPath, out var collector))
             {
