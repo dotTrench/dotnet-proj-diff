@@ -1,6 +1,10 @@
 ﻿# Github Actions
+## Sample GitHub Actions Workflows
 
-## Test Pull Request
+### Test Pull Request
+
+This creates a workflow that runs on pull requests to the `main` and `dev` branches. It uses `dotnet-proj-diff` to determine which projects have changed, restores, builds, and tests only those projects.
+dotnet-proj-diff generates a solution filter file (`.slnf`) that contains only the projects that have changed, which is then used for restoring, building, and testing.
 ```yaml
 name: "Test Pull Request"
 
@@ -27,19 +31,23 @@ jobs:
         run: dotnet tool install --global dotnet-proj-diff
 
       - name: Run dotnet-proj-diff
-        run: dotnet-proj-diff <YOUR_SOLUTION_FILE> ${{ github.target_ref }} --output /tmp/diff.slnf
+        run: dotnet-proj-diff --base ${{ github.target_ref }} --output /tmp/diff.slnf
 
-      - name: Restore solution
+      - name: Restore changed projects
         run: dotnet restore /tmp/diff.slnf
 
-      - name: Build solution
-        run: dotnet build /tmp/diff.slnf --configuration Release
+      - name: Build changed projects
+        run: dotnet build /tmp/diff.slnf --configuration Release --no-restore
 
-      - name: Run tests
-        run: dotnet test /tmp/diff.slnf --configuration Release --no-build --verbosity normal
+      - name: Test changed projects
+        run: dotnet test /tmp/diff.slnf --configuration Release --no-build --no-restore
 ```
 
 ### Publish projects on main branch
+
+This workflow runs on pushes to the `main` branch. It uses `dotnet-proj-diff` to determine which projects have changed, restores, builds, and publishes those projects.
+dotnet-proj-diff generates a solution filter file (`.slnf`) that contains only the projects that have changed, which is then used for restoring, building, and publishing.
+
 ```yaml
 name: "Publish Projects"
 on:
@@ -68,16 +76,16 @@ jobs:
           uses: nrwl/nx-set-shas@v4
 
         - name: Run dotnet-proj-diff
-          run: dotnet-proj-diff <YOUR_SOLUTION_FILE> --base ${{ env.NX_BASE }} --output /tmp/diff.slnf
+          run: dotnet-proj-diff --base ${{ env.NX_BASE }} --output /tmp/diff.slnf
 
-        - name: Restore solution
+        - name: Restore changed projects
           run: dotnet restore /tmp/diff.slnf
 
-        - name: Build solution
-          run: dotnet build /tmp/diff.slnf --configuration Release
+        - name: Build changed projects
+          run: dotnet build /tmp/diff.slnf --configuration Release --no-restore
 
         # Maybe you want to publish the projects as container images to be cool and hip
-        - name: Publish projects
-          run: dotnet publish /tmp/diff.slnf /t:PublishContainer
+        - name: Publish changed projects
+          run: dotnet publish /tmp/diff.slnf /t:PublishContainer --no-build --no-restore --configuration Release 
 ```
 

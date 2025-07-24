@@ -1,6 +1,6 @@
-﻿#!/bin/bash
+﻿#!/usr/bin/env bash
 
-set -e
+set -euo pipefail
 
 dotnet pack
 dotnet tool uninstall --global dotnet-proj-diff
