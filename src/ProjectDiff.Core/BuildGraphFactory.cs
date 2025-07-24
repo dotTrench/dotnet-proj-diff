@@ -11,14 +11,15 @@ public static class BuildGraphFactory
 {
     private static readonly IProjectGraphPredictor[] ProjectGraphPredictors = ProjectPredictors
         .AllProjectGraphPredictors
+        // We create the build graph ourselves, we don't want referenced csproj files to be part of the input files
         .Where(it => it is not ProjectFileAndImportsGraphPredictor)
         .ToArray();
-
 
     public static BuildGraph CreateForProjectGraph(
         ProjectGraph graph,
         Repository repository,
-        IReadOnlyCollection<FileInfo> ignoredFiles
+        IReadOnlyCollection<FileInfo> ignoredFiles,
+        bool checkGitIgnore
     )
     {
         var executor = new ProjectGraphPredictionExecutor(
@@ -26,7 +27,7 @@ public static class BuildGraphFactory
             ProjectPredictors.AllProjectPredictors
         );
 
-        var collector = new BuildGraphPredictionCollector(graph, repository, ignoredFiles);
+        var collector = new BuildGraphPredictionCollector(graph, repository, ignoredFiles, checkGitIgnore);
 
         executor.PredictInputsAndOutputs(graph, collector);
 
@@ -38,17 +39,20 @@ public static class BuildGraphFactory
         private readonly ProjectGraph _projectGraph;
         private readonly Repository _repository;
         private readonly IReadOnlyCollection<FileInfo> _ignoredFiles;
+        private readonly bool _checkGitIgnore;
         private readonly Dictionary<string, BuildGraphProjectCollector> _collectors;
 
         public BuildGraphPredictionCollector(
             ProjectGraph projectGraph,
             Repository repository,
-            IReadOnlyCollection<FileInfo> ignoredFiles
+            IReadOnlyCollection<FileInfo> ignoredFiles,
+            bool checkGitIgnore
         )
         {
             _projectGraph = projectGraph;
             _repository = repository;
             _ignoredFiles = ignoredFiles;
+            _checkGitIgnore = checkGitIgnore;
             _collectors = new Dictionary<string, BuildGraphProjectCollector>(_projectGraph.ProjectNodes.Count);
             foreach (var node in _projectGraph.ProjectNodes)
             {
@@ -79,6 +83,15 @@ public static class BuildGraphFactory
                 return;
             }
 
+            if (_checkGitIgnore)
+            {
+                // Ignore files that are ignored by .gitignore, this does not take
+                var relativePath = Path.GetRelativePath(_repository.Info.WorkingDirectory, path).Replace('\\', '/');
+                if (_repository.Ignore.IsPathIgnored(relativePath))
+                {
+                    return;
+                }
+            }
 
             if (!_collectors.TryGetValue(projectInstance.FullPath, out var collector))
             {

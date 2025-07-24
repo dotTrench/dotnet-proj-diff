@@ -176,8 +176,18 @@ public class ProjectDiffExecutor
         _logger.LogDebug("Head project graph construction metrics: {Metrics}", headGraph.ConstructionMetrics);
 
 
-        var headBuildGraph = BuildGraphFactory.CreateForProjectGraph(headGraph, repo, _options.IgnoreChangedFiles);
-        var baseBuildGraph = BuildGraphFactory.CreateForProjectGraph(baseGraph, repo, _options.IgnoreChangedFiles);
+        var headBuildGraph = BuildGraphFactory.CreateForProjectGraph(
+            headGraph,
+            repo,
+            _options.IgnoreChangedFiles,
+            checkGitIgnore: headCommit is null // If we are using the working directory, we need to check .gitignore to avoid adding files that are ignored
+        );
+        var baseBuildGraph = BuildGraphFactory.CreateForProjectGraph(
+            baseGraph,
+            repo,
+            _options.IgnoreChangedFiles,
+            checkGitIgnore: false // We don't need to check .gitignore for the base graph, as it is always based on a commit
+        );
 
         var projects = BuildGraphDiff.Diff(baseBuildGraph, headBuildGraph, changedFiles)
             .OrderBy(it => it.ReferencedProjects.Count)
