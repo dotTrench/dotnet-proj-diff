@@ -119,7 +119,7 @@ public sealed class ProjectDiffCommand : RootCommand
 
     private static readonly Option<LogLevel> LogLevelOption = new("--log-level")
     {
-        DefaultValueFactory = _ => LogLevel.Information,
+        DefaultValueFactory = _ => LogLevel.Warning,
         Description = "Set the log level for the command",
     };
 
@@ -183,6 +183,7 @@ public sealed class ProjectDiffCommand : RootCommand
         using var loggerFactory = LoggerFactory.Create(x =>
             {
                 x.AddConsole(c => c.LogToStandardErrorThreshold = LogLevel.Trace); // Log everything to stderr
+                x.AddSimpleConsole(x => x.IncludeScopes = true);
                 x.SetMinimumLevel(settings.LogLevel);
             }
         );

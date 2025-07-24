@@ -42,6 +42,10 @@ public class ProjectDiffExecutor
         _logger.LogDebug("Found repository at '{RepoPath}'", repoPath);
 
         using var repo = new Repository(repoPath);
+        if (repo.Info.IsShallow)
+        {
+            _logger.LogWarning("Repository at is shallow, some operations may not work as expected");
+        }
 
         _logger.LogDebug("Looking up base commit '{BaseCommitRef}'", baseCommitRef);
         var baseCommit = repo.Lookup<Commit>(baseCommitRef);
@@ -148,7 +152,6 @@ public class ProjectDiffExecutor
             "Base project graph built with {NumProjects} projects",
             baseGraph.ProjectNodes.Count
         );
-        _logger.LogDebug("Base project graph construction metrics: {Metrics}", baseGraph.ConstructionMetrics);
 
         ProjectGraph headGraph;
         if (headCommit is null)
@@ -173,23 +176,20 @@ public class ProjectDiffExecutor
             "Head project graph built with {NumProjects} projects",
             headGraph.ProjectNodes.Count
         );
-        _logger.LogDebug("Head project graph construction metrics: {Metrics}", headGraph.ConstructionMetrics);
 
 
         var headBuildGraph = BuildGraphFactory.CreateForProjectGraph(
             headGraph,
             repo,
-            _options.IgnoreChangedFiles,
-            checkGitIgnore: headCommit is null // If we are using the working directory, we need to check .gitignore to avoid adding files that are ignored
+            _options.IgnoreChangedFiles
         );
         var baseBuildGraph = BuildGraphFactory.CreateForProjectGraph(
             baseGraph,
             repo,
-            _options.IgnoreChangedFiles,
-            checkGitIgnore: false // We don't need to check .gitignore for the base graph, as it is always based on a commit
+            _options.IgnoreChangedFiles
         );
 
-        var projects = BuildGraphDiff.Diff(baseBuildGraph, headBuildGraph, changedFiles)
+        var projects = BuildGraphDiff.Diff(baseBuildGraph, headBuildGraph, changedFiles, _loggerFactory)
             .OrderBy(it => it.ReferencedProjects.Count)
             .ThenBy(it => it.Name);
         return new ProjectDiffResult
@@ -218,10 +218,6 @@ public class ProjectDiffExecutor
             : repository.Diff.Compare<TreeChanges>(baseCommit.Tree, headCommit.Tree);
         foreach (var change in changes)
         {
-            // if (change.Path != change.OldPath)
-            // {
-            //     yield return Path.GetFullPath(change.OldPath, repository.Info.WorkingDirectory);
-            // }
             yield return Path.GetFullPath(change.Path, repository.Info.WorkingDirectory);
         }
     }
