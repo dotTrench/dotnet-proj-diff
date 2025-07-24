@@ -1,6 +1,6 @@
 # dotnet-proj-diff
 
-![NuGet Version](https://img.shields.io/nuget/v/ProjectDiff.Tool)
+[![NuGet Version](https://img.shields.io/nuget/v/dotnet-proj-diff)](https://www.nuget.org/packages/dotnet-proj-diff)
 ![GitHub License](https://img.shields.io/github/license/dotTrench/dotnet-proj-diff)
 
 [Documentation](docs/)
