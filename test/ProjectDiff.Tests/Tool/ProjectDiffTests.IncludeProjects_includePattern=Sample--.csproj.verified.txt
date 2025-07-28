@@ -1,0 +1,7 @@
+﻿[
+  {
+    path: Sample/Sample.csproj,
+    name: Sample,
+    status: Modified
+  }
+]
