@@ -229,7 +229,7 @@ public sealed class ProjectDiffTests
                 x.RemoveProject(proj);
             }
         );
-        var output = await ExecuteAndReadStdout(repo, $"--solution={sln}");
+        var output = await ExecuteAndReadStdout(repo, "--solution", sln);
 
         await VerifyJson(output);
     }
@@ -255,7 +255,7 @@ public sealed class ProjectDiffTests
         );
         await repo.WriteAllTextAsync("Sample/MyClass.cs", "// Some new content");
 
-        var output = await ExecuteAndReadStdout(repo, $"--include-project={includePattern}");
+        var output = await ExecuteAndReadStdout(repo, $"--include-projects={includePattern}");
 
         await VerifyJson(output)
             .UseParameters(includePattern);
@@ -282,7 +282,7 @@ public sealed class ProjectDiffTests
         );
         await repo.WriteAllTextAsync("Sample/MyClass.cs", "// Some new content");
 
-        var output = await ExecuteAndReadStdout(repo, $"--exclude-project={excludePattern}");
+        var output = await ExecuteAndReadStdout(repo, $"--exclude-projects={excludePattern}");
 
         await VerifyJson(output)
             .UseParameters(excludePattern);

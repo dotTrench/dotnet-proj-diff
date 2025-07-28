@@ -129,16 +129,19 @@ public sealed class ProjectDiffCommand : RootCommand
         Description = "Set the version of the Microsoft.Build.Traversal SDK when using traversal output format",
     };
 
-    private static readonly Option<string[]> ExcludeProjectsOption = new("--exclude-project")
+    private static readonly Option<string[]> ExcludeProjectsOption = new("--exclude-projects")
     {
+        Arity = ArgumentArity.ZeroOrMore,
         Description = "Exclude projects from the output, can be matched multiple times, supports glob patterns",
     };
 
-    private static readonly Option<string[]> IncludeProjectsOption = new("--include-project")
+    private static readonly Option<string[]> IncludeProjectsOption = new("--include-projects")
     {
-        Description = "Include only projects matching the specified patterns, can be matched multiple times, supports glob patterns",
-        DefaultValueFactory = _ => ["*", "**/*"]
+        Arity = ArgumentArity.ZeroOrMore,
+        Description =
+            "Include only projects matching the specified patterns, can be matched multiple times, supports glob patterns"
     };
+
 
     private readonly IConsole _console;
 
@@ -185,7 +188,7 @@ public sealed class ProjectDiffCommand : RootCommand
             LogLevel = parseResult.GetValue(LogLevelOption),
             MicrosoftBuildTraversalVersion = parseResult.GetValue(MicrosoftBuildTraversalVersionOption),
             ExcludeProjects = parseResult.GetValue(ExcludeProjectsOption) ?? [],
-            IncludeProjects = parseResult.GetRequiredValue(IncludeProjectsOption),
+            IncludeProjects = parseResult.GetValue(IncludeProjectsOption) ?? []
         };
 
         return ExecuteCoreAsync(settings, cancellationToken);
@@ -262,7 +265,17 @@ public sealed class ProjectDiffCommand : RootCommand
         }
 
         var matcher = new Matcher();
-        matcher.AddIncludePatterns(settings.IncludeProjects);
+        if (settings.IncludeProjects.Length > 0)
+        {
+            matcher.AddIncludePatterns(settings.IncludeProjects);
+        }
+        else
+        {
+            matcher.AddInclude("**/*")
+                .AddInclude("*");
+        }
+
+
         matcher.AddExcludePatterns(settings.ExcludeProjects);
         var projects = result.Projects
             .Where(ShouldInclude)
