@@ -229,11 +229,64 @@ public sealed class ProjectDiffTests
                 x.RemoveProject(proj);
             }
         );
-        var output = await ExecuteAndReadStdout(repo, $"--solution={sln}");
+        var output = await ExecuteAndReadStdout(repo, "--solution", sln);
 
         await VerifyJson(output);
     }
 
+    [Theory]
+    [InlineData("Sample/*.csproj")]
+    [InlineData("Sample/Sample.csproj")]
+    [InlineData("Sample/**")]
+    public async Task IncludeProjects(string includePattern)
+    {
+        using var repo = await TestRepository.SetupAsync(static r =>
+            {
+                r.CreateDirectory("Sample");
+                r.CreateDirectory("Tests");
+
+                r.CreateProject("Sample/Sample.csproj");
+                r.CreateProject(
+                    "Tests/Tests.csproj",
+                    p => p.AddItem("ProjectReference", @"..\Sample\Sample.csproj")
+                );
+                return Task.CompletedTask;
+            }
+        );
+        await repo.WriteAllTextAsync("Sample/MyClass.cs", "// Some new content");
+
+        var output = await ExecuteAndReadStdout(repo, $"--include-projects={includePattern}");
+
+        await VerifyJson(output)
+            .UseParameters(includePattern);
+    }
+
+    [Theory]
+    [InlineData("Tests/Tests.csproj")]
+    [InlineData("Tests/**")]
+    [InlineData("Tests/*.csproj")]
+    public async Task ExcludeProjects(string excludePattern)
+    {
+        using var repo = await TestRepository.SetupAsync(static r =>
+            {
+                r.CreateDirectory("Sample");
+                r.CreateDirectory("Tests");
+
+                r.CreateProject("Sample/Sample.csproj");
+                r.CreateProject(
+                    "Tests/Tests.csproj",
+                    p => p.AddItem("ProjectReference", @"..\Sample\Sample.csproj")
+                );
+                return Task.CompletedTask;
+            }
+        );
+        await repo.WriteAllTextAsync("Sample/MyClass.cs", "// Some new content");
+
+        var output = await ExecuteAndReadStdout(repo, $"--exclude-projects={excludePattern}");
+
+        await VerifyJson(output)
+            .UseParameters(excludePattern);
+    }
 
     [Fact]
     public async Task DetectsAddedProjects()
@@ -303,14 +356,15 @@ public sealed class ProjectDiffTests
             "--log-level=Error",
             "--format=json",
         ];
+        var stderr = new StringWriter();
         var console = new TestConsole(repository.WorkingDirectory);
 
-        var cli = ProjectDiffTool.BuildCli(console);
+        var cli = ProjectDiffTool.BuildCli(console, stderr: stderr);
         var exitCode = await cli.InvokeAsync([.. args, .. defaultArgs]);
         if (exitCode != 0)
         {
-            var stderr = console.GetStandardError();
-            Assert.Fail($"Program exited with exit code {exitCode}: {stderr}");
+            var error = stderr.ToString();
+            Assert.Fail($"Program exited with exit code {exitCode}: {error}");
         }
 
         return console.GetStandardOutput();

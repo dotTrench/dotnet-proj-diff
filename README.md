@@ -45,8 +45,10 @@ Options:
   -f, --format <Json|Plain|Slnf|Traversal>                           Output format, if --output is specified format will be derived from file extension. Otherwise this defaults to 'plain'
   -o, --out, --output                                                Output file, if not set stdout will be used
   --ignore-changed-file                                              Ignore changes in specific files. If these files are a part of the build evaluation process they will still be evaluated, however these files will be considered unchanged by the diff process []
-  --log-level <Critical|Debug|Error|Information|None|Trace|Warning>  Set the log level for the command [default: Information]
+  --log-level <Critical|Debug|Error|Information|None|Trace|Warning>  Set the log level for the command [default: Warning]
   --msbuild-traversal-version                                        Set the version of the Microsoft.Build.Traversal SDK when using traversal output format
+  --exclude-projects                                                 Exclude projects from the output, can be matched multiple times, supports glob patterns
+  --include-projects                                                 Include only projects matching the specified patterns, can be matched multiple times, supports glob patterns
 ```
 
 The cli should have some sensible defaults, so you can run it without any arguments and get a list of projects that have
@@ -66,7 +68,7 @@ dotnet-proj-diff --base main --head feature/new-feature
 dotnet-proj-diff --base HEAD | dotnet test
 
 # Test all changed test projects in test/ directory
-dotnet-proj-diff | grep 'test/' | dotnet test
+dotnet-proj-diff --include-projects test/**/*.csproj | dotnet test
 ```
 
 ## CI/CD Integration examples

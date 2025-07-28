@@ -18,4 +18,6 @@ public sealed class ProjectDiffSettings
     public required FileInfo[] IgnoreChangedFile { get; init; } = [];
     public string? MicrosoftBuildTraversalVersion { get; init; }
     public LogLevel LogLevel { get; init; } = LogLevel.Information;
+    public required string[] ExcludeProjects { get; init; }
+    public required string[] IncludeProjects { get; init; }
 }

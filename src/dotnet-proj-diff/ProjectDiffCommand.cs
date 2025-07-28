@@ -1,6 +1,7 @@
 using System.CommandLine;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.FileSystemGlobbing;
 using Microsoft.Extensions.Logging;
 using ProjectDiff.Core;
 using ProjectDiff.Core.Entrypoints;
@@ -128,6 +129,20 @@ public sealed class ProjectDiffCommand : RootCommand
         Description = "Set the version of the Microsoft.Build.Traversal SDK when using traversal output format",
     };
 
+    private static readonly Option<string[]> ExcludeProjectsOption = new("--exclude-projects")
+    {
+        Arity = ArgumentArity.ZeroOrMore,
+        Description = "Exclude projects from the output, can be matched multiple times, supports glob patterns",
+    };
+
+    private static readonly Option<string[]> IncludeProjectsOption = new("--include-projects")
+    {
+        Arity = ArgumentArity.ZeroOrMore,
+        Description =
+            "Include only projects matching the specified patterns, can be matched multiple times, supports glob patterns"
+    };
+
+
     private readonly IConsole _console;
 
 
@@ -149,6 +164,8 @@ public sealed class ProjectDiffCommand : RootCommand
         Options.Add(IgnoreChangedFilesOption);
         Options.Add(LogLevelOption);
         Options.Add(MicrosoftBuildTraversalVersionOption);
+        Options.Add(ExcludeProjectsOption);
+        Options.Add(IncludeProjectsOption);
         SetAction(ExecuteAsync);
     }
 
@@ -159,7 +176,7 @@ public sealed class ProjectDiffCommand : RootCommand
             Format = parseResult.GetValue(Format),
             Output = parseResult.GetValue(OutputOption),
             Solution = parseResult.GetValue(SolutionOption),
-            BaseRef = parseResult.GetRequiredValue(BaseCommitOption),
+            BaseRef = parseResult.GetValue(BaseCommitOption) ?? "HEAD",
             HeadRef = parseResult.GetValue(HeadCommitOption),
             MergeBase = parseResult.GetValue(MergeBaseOption),
             IncludeDeleted = parseResult.GetValue(IncludeDeleted),
@@ -167,9 +184,11 @@ public sealed class ProjectDiffCommand : RootCommand
             IncludeAdded = parseResult.GetValue(IncludeAdded),
             IncludeReferencing = parseResult.GetValue(IncludeReferencing),
             AbsolutePaths = parseResult.GetValue(AbsolutePaths),
-            IgnoreChangedFile = parseResult.GetRequiredValue(IgnoreChangedFilesOption),
+            IgnoreChangedFile = parseResult.GetValue(IgnoreChangedFilesOption) ?? [],
             LogLevel = parseResult.GetValue(LogLevelOption),
-            MicrosoftBuildTraversalVersion = parseResult.GetValue(MicrosoftBuildTraversalVersionOption)
+            MicrosoftBuildTraversalVersion = parseResult.GetValue(MicrosoftBuildTraversalVersionOption),
+            ExcludeProjects = parseResult.GetValue(ExcludeProjectsOption) ?? [],
+            IncludeProjects = parseResult.GetValue(IncludeProjectsOption) ?? []
         };
 
         return ExecuteCoreAsync(settings, cancellationToken);
@@ -183,7 +202,7 @@ public sealed class ProjectDiffCommand : RootCommand
         using var loggerFactory = LoggerFactory.Create(x =>
             {
                 x.AddConsole(c => c.LogToStandardErrorThreshold = LogLevel.Trace); // Log everything to stderr
-                x.AddSimpleConsole(x => x.IncludeScopes = true);
+                x.AddSimpleConsole(c => c.IncludeScopes = true);
                 x.SetMinimumLevel(settings.LogLevel);
             }
         );
@@ -245,6 +264,19 @@ public sealed class ProjectDiffCommand : RootCommand
             return 1;
         }
 
+        var matcher = new Matcher();
+        if (settings.IncludeProjects.Length > 0)
+        {
+            matcher.AddIncludePatterns(settings.IncludeProjects);
+        }
+        else
+        {
+            matcher.AddInclude("**/*")
+                .AddInclude("*");
+        }
+
+
+        matcher.AddExcludePatterns(settings.ExcludeProjects);
         var projects = result.Projects
             .Where(ShouldInclude)
             .ToList();
@@ -255,7 +287,7 @@ public sealed class ProjectDiffCommand : RootCommand
             logger.LogDebug(
                 "Diff projects: {Projects}",
                 projects.Select(it => new
-                { it.Path, it.Status, ReferencedProjects = string.Join(',', it.ReferencedProjects) }
+                    { it.Path, it.Status, ReferencedProjects = string.Join(',', it.ReferencedProjects) }
                 )
             );
         }
@@ -272,8 +304,9 @@ public sealed class ProjectDiffCommand : RootCommand
 
         return 0;
 
-        bool ShouldInclude(DiffProject project) =>
-            project.Status switch
+        bool ShouldInclude(DiffProject project)
+        {
+            var shouldIncludeStatus = project.Status switch
             {
                 DiffStatus.Removed when settings.IncludeDeleted => true,
                 DiffStatus.Added when settings.IncludeAdded => true,
@@ -281,6 +314,15 @@ public sealed class ProjectDiffCommand : RootCommand
                 DiffStatus.ReferenceChanged when settings.IncludeReferencing => true,
                 _ => false
             };
+            if (!shouldIncludeStatus)
+            {
+                return false;
+            }
+
+
+            var matchResult = matcher.Match(_console.WorkingDirectory, project.Path);
+            return matchResult.HasMatches;
+        }
     }
 
     private static IOutputFormatter GetFormatter(OutputFormat format, ProjectDiffSettings settings) => format switch
