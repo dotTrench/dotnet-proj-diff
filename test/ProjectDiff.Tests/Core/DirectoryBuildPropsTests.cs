@@ -212,7 +212,7 @@ public sealed class DirectoryBuildPropsTests
     {
         var executor = new ProjectDiffExecutor(new ProjectDiffExecutorOptions());
         return executor.GetProjectDiff(
-            repo.WorkingDirectory,
+            repo.Repository,
             new DirectoryScanEntrypointProvider(NullLogger<DirectoryScanEntrypointProvider>.Instance),
             cancellationToken: TestContext.Current.CancellationToken
         );

@@ -28,7 +28,7 @@ public sealed class BranchTests
         var executor = new ProjectDiffExecutor(new ProjectDiffExecutorOptions(), NullLoggerFactory.Instance);
 
         var result = await executor.GetProjectDiff(
-            repo.WorkingDirectory,
+            repo.Repository,
             new SolutionEntrypointProvider(new FileInfo(sln), NullLogger<SolutionEntrypointProvider>.Instance),
             "master",
             "feature",
@@ -67,7 +67,7 @@ public sealed class BranchTests
 
         var executor = new ProjectDiffExecutor(new ProjectDiffExecutorOptions());
         var result = await executor.GetProjectDiff(
-            repo.WorkingDirectory,
+            repo.Repository,
             new SolutionEntrypointProvider(new FileInfo(sln), NullLogger<SolutionEntrypointProvider>.Instance),
             "master",
             "feature",
@@ -101,7 +101,7 @@ public sealed class BranchTests
         repo.StageAndCommitAllChanges();
         var executor = new ProjectDiffExecutor(new ProjectDiffExecutorOptions());
         var result = await executor.GetProjectDiff(
-            repo.WorkingDirectory,
+            repo.Repository,
             new DirectoryScanEntrypointProvider(NullLogger<DirectoryScanEntrypointProvider>.Instance),
             "master",
             "feature",
@@ -134,7 +134,7 @@ public sealed class BranchTests
 
         var executor = new ProjectDiffExecutor(new ProjectDiffExecutorOptions());
         var result = await executor.GetProjectDiff(
-            repo.WorkingDirectory,
+            repo.Repository,
             new DirectoryScanEntrypointProvider(NullLogger<DirectoryScanEntrypointProvider>.Instance),
             "master",
             "feature",
@@ -172,7 +172,7 @@ public sealed class BranchTests
             }
         );
         var result = await executor.GetProjectDiff(
-            repo.WorkingDirectory,
+            repo.Repository,
             new DirectoryScanEntrypointProvider(NullLogger<DirectoryScanEntrypointProvider>.Instance),
             "master",
             "feature",

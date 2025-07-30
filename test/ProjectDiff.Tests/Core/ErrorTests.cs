@@ -9,28 +9,6 @@ namespace ProjectDiff.Tests.Core;
 public sealed class ErrorTests
 {
     [Fact]
-    public async Task NonExistingRepositoryReturnsError()
-    {
-        var dir = Directory.CreateTempSubdirectory("dotnet-proj-diff-test");
-        try
-        {
-            var executor = new ProjectDiffExecutor(new ProjectDiffExecutorOptions());
-
-            var result = await executor.GetProjectDiff(
-                dir.FullName,
-                new EmptyEntrypointProvider(),
-                cancellationToken: TestContext.Current.CancellationToken
-            );
-
-            Assert.Equal(ProjectDiffExecutionStatus.RepositoryNotFound, result.Status);
-        }
-        finally
-        {
-            dir.Delete();
-        }
-    }
-
-    [Fact]
     public async Task InvalidBaseCommitReturnsError()
     {
         using var repo = TestRepository.CreateEmpty();
@@ -38,7 +16,7 @@ public sealed class ErrorTests
         var executor = new ProjectDiffExecutor(new ProjectDiffExecutorOptions());
 
         var result = await executor.GetProjectDiff(
-            repo.WorkingDirectory,
+            repo.Repository,
             new EmptyEntrypointProvider(),
             "SOME-INVALID-COMMIT-SHA",
             cancellationToken: TestContext.Current.CancellationToken
@@ -55,7 +33,7 @@ public sealed class ErrorTests
         var executor = new ProjectDiffExecutor(new ProjectDiffExecutorOptions());
 
         var result = await executor.GetProjectDiff(
-            repo.WorkingDirectory,
+            repo.Repository,
             new EmptyEntrypointProvider(),
             "HEAD",
             "SOME-INVALID-COMMIT-SHA",

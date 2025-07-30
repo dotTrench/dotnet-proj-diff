@@ -1,11 +1,13 @@
 using System.CommandLine;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using LibGit2Sharp;
 using Microsoft.Extensions.FileSystemGlobbing;
 using Microsoft.Extensions.Logging;
 using ProjectDiff.Core;
 using ProjectDiff.Core.Entrypoints;
 using ProjectDiff.Tool.OutputFormatters;
+using LogLevel = Microsoft.Extensions.Logging.LogLevel;
 
 namespace ProjectDiff.Tool;
 
@@ -208,6 +210,20 @@ public sealed class ProjectDiffCommand : RootCommand
         );
         var logger = loggerFactory.CreateLogger<ProjectDiffCommand>();
 
+        var directory = settings.Solution?.DirectoryName ?? _console.WorkingDirectory;
+        var repoPath = Repository.Discover(directory);
+        if (repoPath is null)
+        {
+            logger.LogError(
+                "No git repository found for the directory '{Directory}'",
+                directory
+            );
+            return 1;
+        }
+
+        logger.LogDebug("Found git repository at {RepoPath}", repoPath);
+        using var repository = new Repository(repoPath);
+
         OutputFormat outputFormat;
         if (settings.Format is not null)
         {
@@ -251,7 +267,7 @@ public sealed class ProjectDiffCommand : RootCommand
             );
 
         var result = await executor.GetProjectDiff(
-            settings.Solution?.DirectoryName ?? _console.WorkingDirectory,
+            repository,
             entrypointProvider,
             settings.BaseRef,
             settings.HeadRef,

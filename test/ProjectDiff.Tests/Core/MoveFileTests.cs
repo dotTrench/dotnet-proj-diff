@@ -104,7 +104,7 @@ public sealed class MoveFileTests
             "ProjectA/FileA.cs",
             "ProjectB/FileA.cs"
         );
-        var projects = await GetDiffProjects(repo);
+        var projects = (await GetDiffProjects(repo)).OrderBy(it => it.Name);
         Assert.Collection(
             projects,
             p =>
@@ -131,7 +131,7 @@ public sealed class MoveFileTests
 
         var executor = new ProjectDiffExecutor(options);
         var result = await executor.GetProjectDiff(
-            repo.WorkingDirectory,
+            repo,
             new DirectoryScanEntrypointProvider(),
             cancellationToken: TestContext.Current.CancellationToken
         );

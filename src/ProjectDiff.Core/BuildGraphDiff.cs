@@ -75,7 +75,10 @@ public static class BuildGraphDiff
                 var existsInCurrent = _graph.Projects.Any(it => it.FullPath == previousProject.FullPath);
                 if (!existsInCurrent)
                 {
-                    _logger.LogDebug("Project {Path} not found in current graph, marking as removed", previousProject.FullPath);
+                    _logger.LogDebug(
+                        "Project {Path} not found in current graph, marking as removed",
+                        previousProject.FullPath
+                    );
                     yield return new DiffProject
                     {
                         Path = previousProject.FullPath,

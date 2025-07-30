@@ -66,6 +66,10 @@ public static class BuildGraphFactory
             {
                 path = Path.GetFullPath(path, projectInstance.Directory);
             }
+            else
+            {
+                path = Path.GetFullPath(path);
+            }
 
             // Only include files that are part of this repository
             if (!path.StartsWith(_repository.Info.WorkingDirectory))
@@ -113,7 +117,7 @@ public static class BuildGraphFactory
 
             return new BuildGraph
             {
-                Projects = projects.OrderBy(it => it.References.Count).ToList(),
+                Projects = projects.ToList(),
             };
         }
 
@@ -132,7 +136,9 @@ public static class BuildGraphFactory
                 collector.AddReferences(references);
             }
 
-            return _collectors.Values.Select(it => it.ToBuildGraphProject());
+            return _projectGraph.ProjectNodesTopologicallySorted
+                .DistinctBy(it => it.ProjectInstance.FullPath)
+                .Select(it => _collectors[it.ProjectInstance.FullPath].ToBuildGraphProject());
         }
     }
 

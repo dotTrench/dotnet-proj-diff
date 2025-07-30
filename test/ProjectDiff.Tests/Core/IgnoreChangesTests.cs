@@ -28,7 +28,7 @@ public sealed class IgnoreChangesTests
             }
         );
         var diff = await executor.GetProjectDiff(
-            repo.WorkingDirectory,
+            repo.Repository,
             new DirectoryScanEntrypointProvider(NullLogger<DirectoryScanEntrypointProvider>.Instance),
             cancellationToken: TestContext.Current.CancellationToken
         );
@@ -52,7 +52,7 @@ public sealed class IgnoreChangesTests
         );
 
         await repo.WriteAllTextAsync("Core/MyClass.cs", "// Some content here");
-        await repo.WriteAllTextAsync("README.md", "Hello there"); // 
+        await repo.WriteAllTextAsync("README.md", "Hello there"); //
         var executor = new ProjectDiffExecutor(
             new ProjectDiffExecutorOptions
             {
@@ -61,7 +61,7 @@ public sealed class IgnoreChangesTests
         );
 
         var diff = await executor.GetProjectDiff(
-            repo.WorkingDirectory,
+            repo.Repository,
             new DirectoryScanEntrypointProvider(NullLogger<DirectoryScanEntrypointProvider>.Instance),
             cancellationToken: TestContext.Current.CancellationToken
         );
@@ -95,7 +95,7 @@ public sealed class IgnoreChangesTests
             }
         );
         var diff = await executor.GetProjectDiff(
-            repo.WorkingDirectory,
+            repo.Repository,
             new DirectoryScanEntrypointProvider(NullLogger<DirectoryScanEntrypointProvider>.Instance),
             cancellationToken: TestContext.Current.CancellationToken
         );
