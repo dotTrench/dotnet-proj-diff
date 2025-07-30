@@ -22,7 +22,7 @@ public class ProjectDiffExecutor
 
     public async Task<ProjectDiffResult> GetProjectDiff(
         Repository repository,
-        IEntrypointProvider entrypointProvider,
+        IProjectGraphEntryPointProvider projectGraphEntryPointProvider,
         string baseCommitRef = "HEAD",
         string? headCommitRef = null,
         CancellationToken cancellationToken = default
@@ -133,7 +133,7 @@ public class ProjectDiffExecutor
             baseBuildGraph = await CreateBuildGraph(
                 repository,
                 projectGraphFactory,
-                entrypointProvider,
+                projectGraphEntryPointProvider,
                 baseCommit,
                 cancellationToken
             );
@@ -145,7 +145,7 @@ public class ProjectDiffExecutor
             headBuildGraph = await CreateBuildGraph(
                 repository,
                 projectGraphFactory,
-                entrypointProvider,
+                projectGraphEntryPointProvider,
                 headCommit,
                 cancellationToken
             );
@@ -167,7 +167,7 @@ public class ProjectDiffExecutor
     private async Task<BuildGraph> CreateBuildGraph(
         Repository repository,
         ProjectGraphFactory projectGraphFactory,
-        IEntrypointProvider entrypointProvider,
+        IProjectGraphEntryPointProvider projectGraphEntryPointProvider,
         Commit? headCommit,
         CancellationToken cancellationToken
     )
@@ -176,8 +176,7 @@ public class ProjectDiffExecutor
         if (headCommit is null)
         {
             projectGraph = await projectGraphFactory.BuildForWorkingDirectory(
-                repository,
-                entrypointProvider,
+                projectGraphEntryPointProvider,
                 cancellationToken
             );
         }
@@ -186,7 +185,7 @@ public class ProjectDiffExecutor
             projectGraph = await projectGraphFactory.BuildForGitTree(
                 repository,
                 headCommit.Tree,
-                entrypointProvider,
+                projectGraphEntryPointProvider,
                 cancellationToken
             );
         }

@@ -213,7 +213,10 @@ public sealed class DirectoryBuildPropsTests
         var executor = new ProjectDiffExecutor(new ProjectDiffExecutorOptions());
         return executor.GetProjectDiff(
             repo.Repository,
-            new DirectoryScanEntrypointProvider(NullLogger<DirectoryScanEntrypointProvider>.Instance),
+            new DirectoryScanProjectGraphEntryPointProvider(
+                repo.WorkingDirectory,
+                NullLogger<DirectoryScanProjectGraphEntryPointProvider>.Instance
+            ),
             cancellationToken: TestContext.Current.CancellationToken
         );
     }

@@ -21,17 +21,7 @@ public sealed class IgnoreChangesTests
 
         await repo.WriteAllTextAsync("Core/Sample.cs", "// New content here");
 
-        var executor = new ProjectDiffExecutor(
-            new ProjectDiffExecutorOptions
-            {
-                IgnoreChangedFiles = [new FileInfo(repo.GetPath("Core/Sample.cs"))]
-            }
-        );
-        var diff = await executor.GetProjectDiff(
-            repo.Repository,
-            new DirectoryScanEntrypointProvider(NullLogger<DirectoryScanEntrypointProvider>.Instance),
-            cancellationToken: TestContext.Current.CancellationToken
-        );
+        var diff = await GetProjectDiff(repo, ["Core/Sample.cs"]);
         Assert.Equal(ProjectDiffExecutionStatus.Success, diff.Status);
 
         Assert.Empty(diff.Projects);
@@ -53,18 +43,8 @@ public sealed class IgnoreChangesTests
 
         await repo.WriteAllTextAsync("Core/MyClass.cs", "// Some content here");
         await repo.WriteAllTextAsync("README.md", "Hello there"); //
-        var executor = new ProjectDiffExecutor(
-            new ProjectDiffExecutorOptions
-            {
-                IgnoreChangedFiles = [new FileInfo(repo.GetPath("Core/MyClass.cs"))]
-            }
-        );
 
-        var diff = await executor.GetProjectDiff(
-            repo.Repository,
-            new DirectoryScanEntrypointProvider(NullLogger<DirectoryScanEntrypointProvider>.Instance),
-            cancellationToken: TestContext.Current.CancellationToken
-        );
+        var diff = await GetProjectDiff(repo, ["Core/MyClass.cs"]);
         Assert.Equal(ProjectDiffExecutionStatus.Success, diff.Status);
 
         Assert.Empty(diff.Projects);
@@ -88,19 +68,27 @@ public sealed class IgnoreChangesTests
         );
 
         repo.DeleteFile("Core/Sample.cs");
-        var executor = new ProjectDiffExecutor(
-            new ProjectDiffExecutorOptions
-            {
-                IgnoreChangedFiles = [new FileInfo(repo.GetPath("Core/Sample.cs"))]
-            }
-        );
-        var diff = await executor.GetProjectDiff(
-            repo.Repository,
-            new DirectoryScanEntrypointProvider(NullLogger<DirectoryScanEntrypointProvider>.Instance),
-            cancellationToken: TestContext.Current.CancellationToken
-        );
+        var diff = await GetProjectDiff(repo, ["Core/Sample.cs"]);
         Assert.Equal(ProjectDiffExecutionStatus.Success, diff.Status);
 
         Assert.Empty(diff.Projects);
+    }
+
+    private static async Task<ProjectDiffResult> GetProjectDiff(TestRepository repo, IEnumerable<string> ignoredFiles)
+    {
+        var files = ignoredFiles.Select(it => new FileInfo(repo.GetPath(it))).ToArray();
+        var options = new ProjectDiffExecutorOptions
+        {
+            IgnoreChangedFiles = files,
+        };
+        var executor = new ProjectDiffExecutor(options);
+        return await executor.GetProjectDiff(
+            repo.Repository,
+            new DirectoryScanProjectGraphEntryPointProvider(
+                repo.WorkingDirectory,
+                NullLogger<DirectoryScanProjectGraphEntryPointProvider>.Instance
+            ),
+            cancellationToken: TestContext.Current.CancellationToken
+        );
     }
 }

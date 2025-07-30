@@ -5,19 +5,21 @@ using Microsoft.VisualStudio.SolutionPersistence.Serializer;
 
 namespace ProjectDiff.Core.Entrypoints;
 
-public sealed class SolutionEntrypointProvider : IEntrypointProvider
+public sealed class SolutionProjectGraphEntryPointProvider : IProjectGraphEntryPointProvider
 {
     private readonly FileInfo _solution;
-    private readonly ILogger<SolutionEntrypointProvider> _logger;
+    private readonly ILogger<SolutionProjectGraphEntryPointProvider> _logger;
 
-    public SolutionEntrypointProvider(FileInfo solution, ILogger<SolutionEntrypointProvider> logger)
+    public SolutionProjectGraphEntryPointProvider(
+        FileInfo solution,
+        ILogger<SolutionProjectGraphEntryPointProvider> logger
+    )
     {
         _solution = solution;
         _logger = logger;
     }
 
-    public async Task<IEnumerable<ProjectGraphEntryPoint>> GetEntrypoints(
-        string repositoryWorkingDirectory,
+    public async Task<IEnumerable<ProjectGraphEntryPoint>> GetEntryPoints(
         MSBuildFileSystemBase fs,
         CancellationToken cancellationToken
     )

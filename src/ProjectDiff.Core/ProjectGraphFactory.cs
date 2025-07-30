@@ -24,7 +24,7 @@ public sealed class ProjectGraphFactory
     public async Task<ProjectGraph> BuildForGitTree(
         Repository repository,
         Tree tree,
-        IEntrypointProvider entrypointProvider,
+        IProjectGraphEntryPointProvider projectGraphEntryPointProvider,
         CancellationToken cancellationToken = default
     )
     {
@@ -42,11 +42,7 @@ public sealed class ProjectGraphFactory
             // Disable eager loading of projects during entrypoint discovery to prevent user accidentally loading projects
             EagerLoadProjects = false
         };
-        var entrypoints = await entrypointProvider.GetEntrypoints(
-            repository.Info.WorkingDirectory,
-            fs,
-            cancellationToken
-        );
+        var entrypoints = await projectGraphEntryPointProvider.GetEntryPoints(fs, cancellationToken);
 
         // Enable eager loading to fix issue with ms build not using the provided file system to load imports
         fs.EagerLoadProjects = true;
@@ -71,8 +67,7 @@ public sealed class ProjectGraphFactory
     }
 
     public async Task<ProjectGraph> BuildForWorkingDirectory(
-        Repository repository,
-        IEntrypointProvider solutionFile,
+        IProjectGraphEntryPointProvider entryPointProvider,
         CancellationToken cancellationToken = default
     )
     {
@@ -80,11 +75,7 @@ public sealed class ProjectGraphFactory
         using var projectCollection = new ProjectCollection();
 
         var fs = new DefaultFileSystem();
-        var entrypoints = (await solutionFile.GetEntrypoints(
-            repository.Info.WorkingDirectory,
-            fs,
-            cancellationToken
-        )).ToList();
+        var entrypoints = await entryPointProvider.GetEntryPoints(fs, cancellationToken);
         var graph = new ProjectGraph(
             entrypoints,
             projectCollection,

@@ -257,18 +257,19 @@ public sealed class ProjectDiffCommand : RootCommand
             loggerFactory
         );
 
-        IEntrypointProvider entrypointProvider = settings.Solution is not null
-            ? new SolutionEntrypointProvider(
+        IProjectGraphEntryPointProvider projectGraphEntryPointProvider = settings.Solution is not null
+            ? new SolutionProjectGraphEntryPointProvider(
                 settings.Solution,
-                loggerFactory.CreateLogger<SolutionEntrypointProvider>()
+                loggerFactory.CreateLogger<SolutionProjectGraphEntryPointProvider>()
             )
-            : new DirectoryScanEntrypointProvider(
-                loggerFactory.CreateLogger<DirectoryScanEntrypointProvider>()
+            : new DirectoryScanProjectGraphEntryPointProvider(
+                repository.Info.WorkingDirectory,
+                loggerFactory.CreateLogger<DirectoryScanProjectGraphEntryPointProvider>()
             );
 
         var result = await executor.GetProjectDiff(
             repository,
-            entrypointProvider,
+            projectGraphEntryPointProvider,
             settings.BaseRef,
             settings.HeadRef,
             cancellationToken

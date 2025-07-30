@@ -28,8 +28,11 @@ public sealed class BranchTests
         var executor = new ProjectDiffExecutor(new ProjectDiffExecutorOptions(), NullLoggerFactory.Instance);
 
         var result = await executor.GetProjectDiff(
-            repo.Repository,
-            new SolutionEntrypointProvider(new FileInfo(sln), NullLogger<SolutionEntrypointProvider>.Instance),
+            repo,
+            new SolutionProjectGraphEntryPointProvider(
+                new FileInfo(sln),
+                NullLogger<SolutionProjectGraphEntryPointProvider>.Instance
+            ),
             "master",
             "feature",
             TestContext.Current.CancellationToken
@@ -67,8 +70,11 @@ public sealed class BranchTests
 
         var executor = new ProjectDiffExecutor(new ProjectDiffExecutorOptions());
         var result = await executor.GetProjectDiff(
-            repo.Repository,
-            new SolutionEntrypointProvider(new FileInfo(sln), NullLogger<SolutionEntrypointProvider>.Instance),
+            repo,
+            new SolutionProjectGraphEntryPointProvider(
+                new FileInfo(sln),
+                NullLogger<SolutionProjectGraphEntryPointProvider>.Instance
+            ),
             "master",
             "feature",
             TestContext.Current.CancellationToken
@@ -101,8 +107,8 @@ public sealed class BranchTests
         repo.StageAndCommitAllChanges();
         var executor = new ProjectDiffExecutor(new ProjectDiffExecutorOptions());
         var result = await executor.GetProjectDiff(
-            repo.Repository,
-            new DirectoryScanEntrypointProvider(NullLogger<DirectoryScanEntrypointProvider>.Instance),
+            repo,
+            new DirectoryScanProjectGraphEntryPointProvider(repo.WorkingDirectory),
             "master",
             "feature",
             TestContext.Current.CancellationToken
@@ -134,8 +140,8 @@ public sealed class BranchTests
 
         var executor = new ProjectDiffExecutor(new ProjectDiffExecutorOptions());
         var result = await executor.GetProjectDiff(
-            repo.Repository,
-            new DirectoryScanEntrypointProvider(NullLogger<DirectoryScanEntrypointProvider>.Instance),
+            repo,
+            new DirectoryScanProjectGraphEntryPointProvider(repo.WorkingDirectory),
             "master",
             "feature",
             TestContext.Current.CancellationToken
@@ -172,8 +178,8 @@ public sealed class BranchTests
             }
         );
         var result = await executor.GetProjectDiff(
-            repo.Repository,
-            new DirectoryScanEntrypointProvider(NullLogger<DirectoryScanEntrypointProvider>.Instance),
+            repo,
+            new DirectoryScanProjectGraphEntryPointProvider(repo.WorkingDirectory),
             "master",
             "feature",
             TestContext.Current.CancellationToken

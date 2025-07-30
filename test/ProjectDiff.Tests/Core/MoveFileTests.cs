@@ -132,7 +132,7 @@ public sealed class MoveFileTests
         var executor = new ProjectDiffExecutor(options);
         var result = await executor.GetProjectDiff(
             repo,
-            new DirectoryScanEntrypointProvider(),
+            new DirectoryScanProjectGraphEntryPointProvider(repo.WorkingDirectory),
             cancellationToken: TestContext.Current.CancellationToken
         );
 

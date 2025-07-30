@@ -17,7 +17,7 @@ public sealed class ErrorTests
 
         var result = await executor.GetProjectDiff(
             repo.Repository,
-            new EmptyEntrypointProvider(),
+            new EmptyProjectGraphEntryPointProvider(),
             "SOME-INVALID-COMMIT-SHA",
             cancellationToken: TestContext.Current.CancellationToken
         );
@@ -34,7 +34,7 @@ public sealed class ErrorTests
 
         var result = await executor.GetProjectDiff(
             repo.Repository,
-            new EmptyEntrypointProvider(),
+            new EmptyProjectGraphEntryPointProvider(),
             "HEAD",
             "SOME-INVALID-COMMIT-SHA",
             TestContext.Current.CancellationToken
@@ -44,10 +44,9 @@ public sealed class ErrorTests
     }
 
 
-    private sealed class EmptyEntrypointProvider : IEntrypointProvider
+    private sealed class EmptyProjectGraphEntryPointProvider : IProjectGraphEntryPointProvider
     {
-        public Task<IEnumerable<ProjectGraphEntryPoint>> GetEntrypoints(
-            string repositoryWorkingDirectory,
+        public Task<IEnumerable<ProjectGraphEntryPoint>> GetEntryPoints(
             MSBuildFileSystemBase fs,
             CancellationToken cancellationToken
         )
