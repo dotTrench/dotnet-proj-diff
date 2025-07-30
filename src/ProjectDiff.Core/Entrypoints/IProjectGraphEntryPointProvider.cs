@@ -3,10 +3,9 @@ using Microsoft.Build.Graph;
 
 namespace ProjectDiff.Core.Entrypoints;
 
-public interface IEntrypointProvider
+public interface IProjectGraphEntryPointProvider
 {
-    Task<IEnumerable<ProjectGraphEntryPoint>> GetEntrypoints(
-        string repositoryWorkingDirectory,
+    Task<IEnumerable<ProjectGraphEntryPoint>> GetEntryPoints(
         MSBuildFileSystemBase fs,
         CancellationToken cancellationToken
     );

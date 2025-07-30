@@ -21,34 +21,20 @@ public class ProjectDiffExecutor
     }
 
     public async Task<ProjectDiffResult> GetProjectDiff(
-        string repositoryPath,
-        IEntrypointProvider entrypointProvider,
+        Repository repository,
+        IProjectGraphEntryPointProvider projectGraphEntryPointProvider,
         string baseCommitRef = "HEAD",
         string? headCommitRef = null,
         CancellationToken cancellationToken = default
     )
     {
-        _logger.LogDebug("Discovering repository from path '{Path}'", repositoryPath);
-        var repoPath = Repository.Discover(repositoryPath);
-        if (repoPath is null)
+        if (repository.Info.IsShallow)
         {
-            _logger.LogError("Could not find a Git repository for path '{Path}'", repositoryPath);
-            return new ProjectDiffResult
-            {
-                Status = ProjectDiffExecutionStatus.RepositoryNotFound
-            };
-        }
-
-        _logger.LogDebug("Found repository at '{RepoPath}'", repoPath);
-
-        using var repo = new Repository(repoPath);
-        if (repo.Info.IsShallow)
-        {
-            _logger.LogWarning("Repository at is shallow, some operations may not work as expected");
+            _logger.LogWarning("Repository is shallow, some operations may not work as expected");
         }
 
         _logger.LogDebug("Looking up base commit '{BaseCommitRef}'", baseCommitRef);
-        var baseCommit = repo.Lookup<Commit>(baseCommitRef);
+        var baseCommit = repository.Lookup<Commit>(baseCommitRef);
         if (baseCommit is null)
         {
             _logger.LogError("Base commit '{BaseCommitRef}' not found in repository", baseCommitRef);
@@ -62,7 +48,7 @@ public class ProjectDiffExecutor
         if (headCommitRef is not null)
         {
             _logger.LogDebug("Looking up head commit '{HeadCommitRef}'", headCommitRef);
-            headCommit = repo.Lookup<Commit>(headCommitRef);
+            headCommit = repository.Lookup<Commit>(headCommitRef);
 
             if (headCommit is null)
             {
@@ -86,13 +72,14 @@ public class ProjectDiffExecutor
                 baseCommitRef,
                 headCommitRef
             );
-            var mergeBaseCommit = repo.ObjectDatabase.FindMergeBase(baseCommit, headCommit ?? repo.Head.Tip);
+            var head = headCommit ?? repository.Head.Tip;
+            var mergeBaseCommit = repository.ObjectDatabase.FindMergeBase(baseCommit, head);
             if (mergeBaseCommit is null)
             {
                 _logger.LogError(
                     "Could not find merge base between base commit '{BaseCommitRef}' and head commit '{HeadCommitRef}'",
                     baseCommitRef,
-                    headCommitRef
+                    head.Sha
                 );
                 return new ProjectDiffResult
                 {
@@ -113,10 +100,9 @@ public class ProjectDiffExecutor
             baseCommitRef,
             headCommitRef ?? "working directory"
         );
-        var changedFiles = GetGitModifiedFiles(repo, baseCommit, headCommit)
+        var changedFiles = GetGitModifiedFiles(repository, baseCommit, headCommit)
             .Where(ShouldIncludeFile)
             .ToList();
-
 
         if (changedFiles.Count == 0)
         {
@@ -133,7 +119,6 @@ public class ProjectDiffExecutor
             };
         }
 
-
         _logger.LogInformation("Found {NumChangedFiles} changed files", changedFiles.Count);
         if (_logger.IsEnabled(LogLevel.Debug))
         {
@@ -142,56 +127,32 @@ public class ProjectDiffExecutor
 
         var projectGraphFactory = new ProjectGraphFactory(_loggerFactory);
 
-        var baseGraph = await projectGraphFactory.BuildForGitTree(
-            repo,
-            baseCommit.Tree,
-            entrypointProvider,
-            cancellationToken
-        );
-        _logger.LogInformation(
-            "Base project graph built with {NumProjects} projects",
-            baseGraph.ProjectNodes.Count
-        );
-
-        ProjectGraph headGraph;
-        if (headCommit is null)
+        BuildGraph baseBuildGraph;
+        using (_logger.BeginScope("Building base graph"))
         {
-            headGraph = await projectGraphFactory.BuildForWorkingDirectory(
-                repo,
-                entrypointProvider,
-                cancellationToken
-            );
-        }
-        else
-        {
-            headGraph = await projectGraphFactory.BuildForGitTree(
-                repo,
-                headCommit.Tree,
-                entrypointProvider,
+            baseBuildGraph = await CreateBuildGraph(
+                repository,
+                projectGraphFactory,
+                projectGraphEntryPointProvider,
+                baseCommit,
                 cancellationToken
             );
         }
 
-        _logger.LogInformation(
-            "Head project graph built with {NumProjects} projects",
-            headGraph.ProjectNodes.Count
-        );
+        BuildGraph headBuildGraph;
+        using (_logger.BeginScope("Building head graph"))
+        {
+            headBuildGraph = await CreateBuildGraph(
+                repository,
+                projectGraphFactory,
+                projectGraphEntryPointProvider,
+                headCommit,
+                cancellationToken
+            );
+        }
 
 
-        var headBuildGraph = BuildGraphFactory.CreateForProjectGraph(
-            headGraph,
-            repo,
-            _options.IgnoreChangedFiles
-        );
-        var baseBuildGraph = BuildGraphFactory.CreateForProjectGraph(
-            baseGraph,
-            repo,
-            _options.IgnoreChangedFiles
-        );
-
-        var projects = BuildGraphDiff.Diff(baseBuildGraph, headBuildGraph, changedFiles, _loggerFactory)
-            .OrderBy(it => it.ReferencedProjects.Count)
-            .ThenBy(it => it.Name);
+        var projects = BuildGraphDiff.Diff(baseBuildGraph, headBuildGraph, changedFiles, _loggerFactory);
         return new ProjectDiffResult
         {
             Status = ProjectDiffExecutionStatus.Success,
@@ -203,6 +164,38 @@ public class ProjectDiffExecutor
             _options.IgnoreChangedFiles.Length == 0 || _options.IgnoreChangedFiles.All(it => it.FullName != file);
     }
 
+    private async Task<BuildGraph> CreateBuildGraph(
+        Repository repository,
+        ProjectGraphFactory projectGraphFactory,
+        IProjectGraphEntryPointProvider projectGraphEntryPointProvider,
+        Commit? headCommit,
+        CancellationToken cancellationToken
+    )
+    {
+        ProjectGraph projectGraph;
+        if (headCommit is null)
+        {
+            projectGraph = await projectGraphFactory.BuildForWorkingDirectory(
+                projectGraphEntryPointProvider,
+                cancellationToken
+            );
+        }
+        else
+        {
+            projectGraph = await projectGraphFactory.BuildForGitTree(
+                repository,
+                headCommit.Tree,
+                projectGraphEntryPointProvider,
+                cancellationToken
+            );
+        }
+
+        return BuildGraphFactory.CreateForProjectGraph(
+            projectGraph,
+            repository,
+            _options.IgnoreChangedFiles
+        );
+    }
 
     private static IEnumerable<string> GetGitModifiedFiles(
         Repository repository,

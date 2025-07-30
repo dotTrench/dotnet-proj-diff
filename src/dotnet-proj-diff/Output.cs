@@ -1,13 +1,19 @@
 namespace ProjectDiff.Tool;
 
-public sealed class Output(FileInfo? outputFile, IConsole console)
+public sealed class Output
 {
-    public string RootDirectory => outputFile?.DirectoryName ?? console.WorkingDirectory;
+    private readonly FileInfo? _outputFile;
+    private readonly IConsole _console;
 
-    public Stream Open()
+    public Output(FileInfo? outputFile, IConsole console)
     {
-        return outputFile?.Create() ?? console.OpenStandardOutput();
+        _outputFile = outputFile;
+        _console = console;
     }
+
+    public string RootDirectory => _outputFile?.DirectoryName ?? _console.WorkingDirectory;
+
+    public Stream Open() => _outputFile?.Create() ?? _console.OpenStandardOutput();
 
     public string NormalizePath(string path, bool absolutePaths) =>
         absolutePaths ? path.Replace('\\', '/') : Path.GetRelativePath(RootDirectory, path).Replace('\\', '/');
