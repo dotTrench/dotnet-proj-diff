@@ -13,26 +13,30 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.Build.Locator" Version="1.9.1" />
-        <PackageReference Include="Microsoft.Extensions.FileSystemGlobbing" Version="9.0.7" />
-        <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.7" />
+        <PackageReference Include="Microsoft.Build" Version="17.11.4" ExcludeAssets="runtime"/>
+        <PackageReference Include="Microsoft.Build.Framework" Version="17.11.4" ExcludeAssets="runtime"/>
+        <PackageReference Include="Microsoft.Build.Utilities.Core" Version="17.11.4" ExcludeAssets="runtime"/>
+
+        <PackageReference Include="Microsoft.Build.Locator" Version="1.9.1"/>
+        <PackageReference Include="Microsoft.Extensions.FileSystemGlobbing" Version="9.0.7"/>
+        <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.7"/>
         <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0">
-          <PrivateAssets>all</PrivateAssets>
-          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
         <PackageReference Include="MinVer" Version="6.0.0">
-          <PrivateAssets>all</PrivateAssets>
-          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-        <PackageReference Include="System.CommandLine" Version="2.0.0-beta6.25358.103" />
+        <PackageReference Include="System.CommandLine" Version="2.0.0-beta6.25358.103"/>
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\ProjectDiff.Core\ProjectDiff.Core.csproj" />
+        <ProjectReference Include="..\ProjectDiff.Core\ProjectDiff.Core.csproj"/>
     </ItemGroup>
-    
+
     <ItemGroup>
-        <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+        <None Include="..\..\README.md" Pack="true" PackagePath="\"/>
     </ItemGroup>
 
 </Project>

@@ -35,7 +35,6 @@ public sealed class ProjectGraphFactory
             repository,
             tree,
             projectCollection,
-            [],
             _loggerFactory.CreateLogger<GitTreeFileSystem>()
         )
         {
@@ -52,13 +51,7 @@ public sealed class ProjectGraphFactory
             (path, globalProperties, collection) =>
             {
                 var proj = fs.LoadProject(path, globalProperties, collection);
-
-                proj.MarkDirty();
-
-                return proj.CreateProjectInstance(
-                    ProjectInstanceSettings.None,
-                    EvaluationContext.Create(EvaluationContext.SharingPolicy.Shared, fs)
-                );
+                return proj.CreateProjectInstance(ProjectInstanceSettings.Immutable);
             },
             cancellationToken
         );

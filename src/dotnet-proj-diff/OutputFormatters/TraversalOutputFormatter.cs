@@ -21,7 +21,8 @@ public sealed class TraversalOutputFormatter : IOutputFormatter
         CancellationToken cancellationToken = default
     )
     {
-        var element = ProjectRootElement.Create(NewProjectFileOptions.None);
+        using var projectCollection = new ProjectCollection();
+        var element = ProjectRootElement.Create(projectCollection, NewProjectFileOptions.None);
         element.Sdk = _microsoftBuildTraversalVersion != null
             ? $"Microsoft.Build.Traversal/{_microsoftBuildTraversalVersion}"
             : "Microsoft.Build.Traversal";

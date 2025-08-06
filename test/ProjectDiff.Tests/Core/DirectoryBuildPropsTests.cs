@@ -207,6 +207,80 @@ public sealed class DirectoryBuildPropsTests
         Assert.Equal(DiffStatus.Modified, project.Status);
     }
 
+    [Fact]
+    public async Task RemovingDirectoryBuildProps_ShouldAffectProjects()
+    {
+        using var repo = await TestRepository.SetupAsync(async r =>
+            {
+                await r.WriteAllTextAsync(
+                    "Directory.Build.props",
+                    """
+                    <Project>
+                        <PropertyGroup>
+                            <MyCustomProperty>Value</MyCustomProperty>
+                        </PropertyGroup>
+                    </Project>
+                    """
+                );
+
+                r.CreateDirectory("Sample");
+                r.CreateProject("Sample/Sample.csproj");
+            }
+        );
+
+        repo.DeleteFile("Directory.Build.props");
+
+        var result = await GetProjectDiff(repo);
+
+        Assert.Equal(ProjectDiffExecutionStatus.Success, result.Status);
+
+        var project = Assert.Single(result.Projects);
+
+        Assert.Equal(DiffStatus.Modified, project.Status);
+    }
+
+    [Fact]
+    public async Task RemovingNestedDirecotryBuildProps_ShouldAffectProjects()
+    {
+        using var repo = await TestRepository.SetupAsync(async r =>
+            {
+                await r.WriteAllTextAsync(
+                    "Directory.Build.props",
+                    """
+                    <Project>
+                        <PropertyGroup>
+                            <MyCustomProperty>Value</MyCustomProperty>
+                        </PropertyGroup>
+                    </Project>
+                    """
+                );
+
+                r.CreateDirectory("Sample");
+                await r.WriteAllTextAsync(
+                    "Sample/Directory.Build.props",
+                    """
+                    <Project>
+                        <PropertyGroup>
+                            <SomeOtherProperty>Value</SomeOtherProperty>
+                        </PropertyGroup>
+                    </Project>
+                    """
+                );
+                r.CreateProject("Sample/Sample.csproj");
+            }
+        );
+
+        repo.DeleteFile("Sample/Directory.Build.props");
+
+        var result = await GetProjectDiff(repo);
+
+        Assert.Equal(ProjectDiffExecutionStatus.Success, result.Status);
+
+        var project = Assert.Single(result.Projects);
+
+        Assert.Equal(DiffStatus.Modified, project.Status);
+    }
+
 
     private static Task<ProjectDiffResult> GetProjectDiff(TestRepository repo)
     {
