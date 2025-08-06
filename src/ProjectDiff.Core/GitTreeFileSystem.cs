@@ -4,6 +4,7 @@ using LibGit2Sharp;
 using Microsoft.Build.Construction;
 using Microsoft.Build.Definition;
 using Microsoft.Build.Evaluation;
+using Microsoft.Build.Evaluation.Context;
 using Microsoft.Build.FileSystem;
 using Microsoft.Extensions.Logging;
 
@@ -14,22 +15,21 @@ public sealed class GitTreeFileSystem : MSBuildFileSystemBase
     private readonly Repository _repository;
     private readonly Tree _tree;
     private readonly ProjectCollection _projectCollection;
-    private readonly Dictionary<string, string> _globalProperties;
     private readonly ILogger<GitTreeFileSystem> _logger;
+    private readonly EvaluationContext _evaluationContext;
 
     public GitTreeFileSystem(
         Repository repository,
         Tree tree,
         ProjectCollection projectCollection,
-        Dictionary<string, string> globalProperties,
         ILogger<GitTreeFileSystem> logger
     )
     {
         _repository = repository;
         _tree = tree;
         _projectCollection = projectCollection;
-        _globalProperties = globalProperties;
         _logger = logger;
+        _evaluationContext = EvaluationContext.Create(EvaluationContext.SharingPolicy.Shared, this);
     }
 
     public bool EagerLoadProjects { get; set; }
@@ -189,7 +189,7 @@ public sealed class GitTreeFileSystem : MSBuildFileSystemBase
                 if (_projectCollection.GetLoadedProjects(path).Count == 0)
                 {
                     _logger.LogDebug("Eagerly loading project from path '{Path}'", path);
-                    LoadProject(path, _globalProperties, _projectCollection);
+                    LoadProject(path, [], _projectCollection);
                 }
             }
         }
@@ -258,7 +258,8 @@ public sealed class GitTreeFileSystem : MSBuildFileSystemBase
             {
                 GlobalProperties = globalProperties,
                 ProjectCollection = projects,
-                LoadSettings = ProjectLoadSettings.Default | ProjectLoadSettings.RecordDuplicateButNotCircularImports
+                LoadSettings = ProjectLoadSettings.Default,
+                EvaluationContext = _evaluationContext,
             }
         );
 

@@ -20,7 +20,6 @@ public sealed class GitTreeFileSystemTests
             repo,
             repo.HeadTree,
             projects,
-            [],
             NullLogger<GitTreeFileSystem>.Instance
         );
 
@@ -42,7 +41,6 @@ public sealed class GitTreeFileSystemTests
             repo,
             repo.HeadTree,
             projects,
-            [],
             NullLogger<GitTreeFileSystem>.Instance
         );
 
@@ -65,7 +63,6 @@ public sealed class GitTreeFileSystemTests
             repo,
             repo.HeadTree,
             projects,
-            [],
             NullLogger<GitTreeFileSystem>.Instance
         );
 
@@ -89,7 +86,6 @@ public sealed class GitTreeFileSystemTests
             repo,
             repo.HeadTree,
             projects,
-            [],
             NullLogger<GitTreeFileSystem>.Instance
         );
 
@@ -108,7 +104,6 @@ public sealed class GitTreeFileSystemTests
             repo,
             repo.HeadTree,
             projects,
-            [],
             NullLogger<GitTreeFileSystem>.Instance
         );
 
@@ -129,7 +124,6 @@ public sealed class GitTreeFileSystemTests
             repo,
             repo.HeadTree,
             projects,
-            [],
             NullLogger<GitTreeFileSystem>.Instance
         );
 
@@ -148,7 +142,6 @@ public sealed class GitTreeFileSystemTests
             repo,
             repo.HeadTree,
             projects,
-            [],
             NullLogger<GitTreeFileSystem>.Instance
         );
 
@@ -169,7 +162,6 @@ public sealed class GitTreeFileSystemTests
             repo,
             repo.HeadTree,
             projects,
-            [],
             NullLogger<GitTreeFileSystem>.Instance
         );
 
@@ -193,7 +185,6 @@ public sealed class GitTreeFileSystemTests
             repo,
             repo.HeadTree,
             projects,
-            [],
             NullLogger<GitTreeFileSystem>.Instance
         );
 
@@ -212,7 +203,6 @@ public sealed class GitTreeFileSystemTests
             repo,
             repo.HeadTree,
             projects,
-            [],
             NullLogger<GitTreeFileSystem>.Instance
         );
 
@@ -238,7 +228,6 @@ public sealed class GitTreeFileSystemTests
             repo,
             repo.HeadTree,
             projects,
-            [],
             NullLogger<GitTreeFileSystem>.Instance
         );
 
@@ -274,7 +263,6 @@ public sealed class GitTreeFileSystemTests
             repo,
             repo.HeadTree,
             projects,
-            [],
             NullLogger<GitTreeFileSystem>.Instance
         );
 
@@ -313,7 +301,6 @@ public sealed class GitTreeFileSystemTests
             repo,
             repo.HeadTree,
             projects,
-            [],
             NullLogger<GitTreeFileSystem>.Instance
         );
 
@@ -344,7 +331,6 @@ public sealed class GitTreeFileSystemTests
             repo,
             repo.HeadTree,
             projects,
-            [],
             NullLogger<GitTreeFileSystem>.Instance
         );
 
@@ -371,7 +357,6 @@ public sealed class GitTreeFileSystemTests
             repo,
             repo.HeadTree,
             projects,
-            [],
             NullLogger<GitTreeFileSystem>.Instance
         );
 
@@ -411,7 +396,6 @@ public sealed class GitTreeFileSystemTests
             repo,
             repo.HeadTree,
             projects,
-            [],
             NullLogger<GitTreeFileSystem>.Instance
         );
 
@@ -447,7 +431,6 @@ public sealed class GitTreeFileSystemTests
             repo,
             repo.HeadTree,
             projects,
-            [],
             NullLogger<GitTreeFileSystem>.Instance
         );
 
@@ -486,7 +469,6 @@ public sealed class GitTreeFileSystemTests
             repo,
             repo.HeadTree,
             projects,
-            [],
             NullLogger<GitTreeFileSystem>.Instance
         );
 

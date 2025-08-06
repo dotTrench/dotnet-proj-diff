@@ -9,24 +9,28 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="coverlet.collector" Version="6.0.4" />
-        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
-        <PackageReference Include="System.Collections.Immutable" Version="9.0.7" />
-        <PackageReference Include="System.IO.Pipelines" Version="9.0.7" />
-        <PackageReference Include="Verify.XunitV3" Version="30.5.0" />
+        <PackageReference Include="Microsoft.Build" Version="17.11.4" ExcludeAssets="runtime"/>
+        <PackageReference Include="Microsoft.Build.Framework" Version="17.11.4" ExcludeAssets="runtime"/>
+        <PackageReference Include="Microsoft.Build.Utilities.Core" Version="17.11.4" ExcludeAssets="runtime"/>
+
+        <PackageReference Include="coverlet.collector" Version="6.0.4"/>
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1"/>
+        <PackageReference Include="System.Collections.Immutable" Version="9.0.7"/>
+        <PackageReference Include="System.IO.Pipelines" Version="9.0.7"/>
+        <PackageReference Include="Verify.XunitV3" Version="30.5.0"/>
         <PackageReference Include="xunit.runner.visualstudio" Version="3.1.3">
-          <PrivateAssets>all</PrivateAssets>
-          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-        <PackageReference Include="xunit.v3" Version="3.0.0" />
+        <PackageReference Include="xunit.v3" Version="3.0.0"/>
     </ItemGroup>
 
     <ItemGroup>
-        <Using Include="Xunit" />
+        <Using Include="Xunit"/>
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\src\dotnet-proj-diff\dotnet-proj-diff.csproj" />
+        <ProjectReference Include="..\..\src\dotnet-proj-diff\dotnet-proj-diff.csproj"/>
     </ItemGroup>
 
 </Project>
