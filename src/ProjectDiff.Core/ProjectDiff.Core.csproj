@@ -11,8 +11,8 @@
 
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.Build" Version="17.11.4"/>
-        <PackageReference Include="Microsoft.Build.Framework" Version="17.11.4"/>
+        <PackageReference Include="Microsoft.Build" Version="17.11.31"/>
+        <PackageReference Include="Microsoft.Build.Framework" Version="17.11.31"/>
         <PackageReference Include="Microsoft.Build.Utilities.Core" Version="17.11.4"/>
 
         <PackageReference Include="LibGit2Sharp" Version="0.31.0"/>
