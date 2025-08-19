@@ -18,7 +18,7 @@
         <PackageReference Include="Microsoft.Build.Utilities.Core" Version="17.11.4" ExcludeAssets="runtime"/>
 
         <PackageReference Include="Microsoft.Build.Locator" Version="1.9.1"/>
-        <PackageReference Include="Microsoft.Extensions.FileSystemGlobbing" Version="9.0.7"/>
+        <PackageReference Include="Microsoft.Extensions.FileSystemGlobbing" Version="9.0.8"/>
         <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.7"/>
         <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0">
             <PrivateAssets>all</PrivateAssets>
