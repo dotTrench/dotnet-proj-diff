@@ -10,8 +10,8 @@
 
     <ItemGroup>
         <PackageReference Include="Microsoft.Build" Version="17.11.4" ExcludeAssets="runtime"/>
-        <PackageReference Include="Microsoft.Build.Framework" Version="17.11.4" ExcludeAssets="runtime"/>
-        <PackageReference Include="Microsoft.Build.Utilities.Core" Version="17.11.4" ExcludeAssets="runtime"/>
+        <PackageReference Include="Microsoft.Build.Framework" Version="17.11.48" ExcludeAssets="runtime"/>
+        <PackageReference Include="Microsoft.Build.Utilities.Core" Version="17.11.48" ExcludeAssets="runtime"/>
 
         <PackageReference Include="coverlet.collector" Version="6.0.4"/>
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1"/>

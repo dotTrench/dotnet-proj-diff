@@ -14,8 +14,8 @@
 
     <ItemGroup>
         <PackageReference Include="Microsoft.Build" Version="17.11.4" ExcludeAssets="runtime"/>
-        <PackageReference Include="Microsoft.Build.Framework" Version="17.11.4" ExcludeAssets="runtime"/>
-        <PackageReference Include="Microsoft.Build.Utilities.Core" Version="17.11.4" ExcludeAssets="runtime"/>
+        <PackageReference Include="Microsoft.Build.Framework" Version="17.11.48" ExcludeAssets="runtime"/>
+        <PackageReference Include="Microsoft.Build.Utilities.Core" Version="17.11.48" ExcludeAssets="runtime"/>
 
         <PackageReference Include="Microsoft.Build.Locator" Version="1.9.1"/>
         <PackageReference Include="Microsoft.Extensions.FileSystemGlobbing" Version="9.0.8"/>
