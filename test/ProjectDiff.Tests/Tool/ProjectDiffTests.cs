@@ -337,15 +337,6 @@ public sealed class ProjectDiffTests
         await VerifyJson(output);
     }
 
-    [Fact]
-    public void BuildingCliIsValid()
-    {
-        var console = new TestConsole(Directory.GetCurrentDirectory());
-        var cli = ProjectDiffTool.BuildCli(console);
-        cli.ThrowIfInvalid();
-    }
-
-
     private static async Task<string> ExecuteAndReadStdout(
         TestRepository repository,
         params string[] args

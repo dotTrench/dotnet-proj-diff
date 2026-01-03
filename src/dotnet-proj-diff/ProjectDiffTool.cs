@@ -2,21 +2,42 @@ using System.CommandLine;
 
 namespace ProjectDiff.Tool;
 
-public static class ProjectDiffTool
+public class ProjectDiffTool
 {
-    public static CommandLineConfiguration BuildCli(IConsole console, TextWriter? stderr = null, TextWriter? stdout = null)
+    private readonly RootCommand _command;
+    private readonly TextWriter? _stderr;
+    private readonly TextWriter? _stdout;
+
+    public ProjectDiffTool(RootCommand command, TextWriter? stderr, TextWriter? stdout)
     {
-        var cli = new CommandLineConfiguration(new ProjectDiffCommand(console));
-        if (stderr is not null)
+        _command = command;
+        _stderr = stderr;
+        _stdout = stdout;
+    }
+
+    public static ProjectDiffTool BuildCli(IConsole console, TextWriter? stderr = null, TextWriter? stdout = null)
+    {
+        var cli = new ProjectDiffCommand(console);
+
+
+        return new ProjectDiffTool(cli, stderr, stdout);
+    }
+
+    public async Task<int> InvokeAsync(IReadOnlyList<string> args, CancellationToken cancellationToken = default)
+    {
+        var parseResult = _command.Parse(args);
+
+        var config = new InvocationConfiguration();
+        if (_stderr is not null)
         {
-            cli.Error = stderr;
+            config.Error = _stderr;
         }
 
-        if (stdout is not null)
+        if (_stdout is not null)
         {
-            cli.Output = stdout;
+            config.Output = _stdout;
         }
 
-        return cli;
+        return await parseResult.InvokeAsync(config, cancellationToken);
     }
 }
