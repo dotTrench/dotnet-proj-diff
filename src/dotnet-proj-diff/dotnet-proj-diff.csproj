@@ -14,9 +14,9 @@
 
     <ItemGroup>
         <PackageReference Include="Microsoft.Build" Version="17.11.48" ExcludeAssets="runtime"/>
-        <PackageReference Include="Microsoft.Build.Framework" Version="17.11.48" ExcludeAssets="runtime"/>
-        <PackageReference Include="Microsoft.Build.Utilities.Core" Version="17.11.48" ExcludeAssets="runtime"/>
-        <PackageReference Include="Microsoft.NET.StringTools" Version="17.11.48" ExcludeAssets="runtime"/>
+        <PackageReference Include="Microsoft.Build.Framework" Version="18.0.2" ExcludeAssets="runtime"/>
+        <PackageReference Include="Microsoft.Build.Utilities.Core" Version="18.0.2" ExcludeAssets="runtime"/>
+        <PackageReference Include="Microsoft.NET.StringTools" Version="18.0.2" ExcludeAssets="runtime"/>
 
         <PackageReference Include="Microsoft.Build.Locator" Version="1.11.2" />
         <PackageReference Include="Microsoft.Extensions.FileSystemGlobbing" Version="10.0.1" />
