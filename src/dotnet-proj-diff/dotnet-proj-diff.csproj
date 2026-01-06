@@ -13,23 +13,23 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.Build" Version="17.11.48" ExcludeAssets="runtime"/>
-        <PackageReference Include="Microsoft.Build.Framework" Version="17.11.48" ExcludeAssets="runtime"/>
-        <PackageReference Include="Microsoft.Build.Utilities.Core" Version="17.11.48" ExcludeAssets="runtime"/>
-        <PackageReference Include="Microsoft.NET.StringTools" Version="17.11.48" ExcludeAssets="runtime"/>
+        <PackageReference Include="Microsoft.Build" ExcludeAssets="runtime"/>
+        <PackageReference Include="Microsoft.Build.Framework" ExcludeAssets="runtime"/>
+        <PackageReference Include="Microsoft.Build.Utilities.Core" ExcludeAssets="runtime"/>
+        <PackageReference Include="Microsoft.NET.StringTools" ExcludeAssets="runtime"/>
 
-        <PackageReference Include="Microsoft.Build.Locator" Version="1.11.2" />
-        <PackageReference Include="Microsoft.Extensions.FileSystemGlobbing" Version="10.0.1" />
-        <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.1" />
-        <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0">
+        <PackageReference Include="Microsoft.Build.Locator"/>
+        <PackageReference Include="Microsoft.Extensions.FileSystemGlobbing"/>
+        <PackageReference Include="Microsoft.Extensions.Logging.Console"/>
+        <PackageReference Include="Microsoft.SourceLink.GitHub">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-        <PackageReference Include="MinVer" Version="6.1.0">
+        <PackageReference Include="MinVer">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-        <PackageReference Include="System.CommandLine" Version="2.0.1" />
+        <PackageReference Include="System.CommandLine"/>
     </ItemGroup>
 
     <ItemGroup>
