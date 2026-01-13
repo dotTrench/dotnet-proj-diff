@@ -35,10 +35,6 @@ public sealed class ProjectDiffCommand : RootCommand
                 {
                     x.AddError("{x.Argument.Name} must be specified");
                 }
-                else if (!f.Exists)
-                {
-                    x.AddError($"File '{f.FullName}' does not exist.");
-                }
                 else if (f.Extension is not (".sln" or ".slnx"))
                 {
                     x.AddError($"File '{f.FullName}' is not a valid sln file.");

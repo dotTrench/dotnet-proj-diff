@@ -26,8 +26,8 @@ public sealed class SolutionProjectGraphEntryPointProvider : IProjectGraphEntryP
     {
         if (!fs.FileExists(_solution.FullName))
         {
-            _logger.LogError("Could not find the solution file {SolutionFile} in the file system", _solution.FullName);
-            throw new FileNotFoundException("Could not find the solution file in the file system", _solution.FullName);
+            _logger.LogWarning("Could not find the solution file {SolutionFile} in the file system, assuming empty", _solution.FullName);
+            return [];
         }
 
         await using var stream = fs.GetFileStream(

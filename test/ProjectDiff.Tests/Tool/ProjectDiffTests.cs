@@ -337,6 +337,24 @@ public sealed class ProjectDiffTests
         await VerifyJson(output);
     }
 
+    [Fact]
+    public async Task NewSolutionMarksProjectAsAdded()
+    {
+
+        using var repo = await TestRepository.SetupAsync(static async r =>
+            {
+                r.CreateDirectory("Sample");
+                r.CreateProject("Sample/Sample.csproj");
+                await r.WriteAllTextAsync("Sample/MyClass.cs", "// Some content");
+            }
+        );
+
+        var sln = await repo.CreateSolutionAsync("Sample.sln", sln => sln.AddProject("Sample/Sample.csproj"));
+
+        var output = await ExecuteAndReadStdout(repo, $"--solution={sln}");
+        await VerifyJson(output);
+    }
+
     private static async Task<string> ExecuteAndReadStdout(
         TestRepository repository,
         params string[] args
