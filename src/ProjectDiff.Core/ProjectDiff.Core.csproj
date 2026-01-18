@@ -30,6 +30,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <PackageReference Include="System.Collections.Immutable" VersionOverride="10.0.2" />
         <None Include="README.md" Pack="true" PackagePath="\"/>
     </ItemGroup>
 </Project>
